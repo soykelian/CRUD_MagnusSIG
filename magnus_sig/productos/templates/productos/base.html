@@ -8,10 +8,10 @@
   <title>{% block title %}Inventario · Magnus SIG{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'productos/tailwind.generated.css' %}">
   <link rel="stylesheet" href="{% static 'productos/nexo-ui.css' %}?v=9">
-  <link rel="stylesheet" href="{% static 'productos/magnus-reference.css' %}?v=39">
+  <link rel="stylesheet" href="{% static 'productos/magnus-reference.css' %}?v=40">
   <link rel="stylesheet" href="{% static 'productos/build/motion.css' %}?v=1">
   <script type="module" src="{% static 'productos/build/motion.js' %}?v=1"></script>
-  <script src="{% static 'productos/app.js' %}?v=3" defer></script>
+  <script src="{% static 'productos/app.js' %}?v=4" defer></script>
   <style>
     .inline-form{display:inline;margin:0}
     .inline-form button{font:inherit;cursor:pointer}
@@ -20,7 +20,20 @@
 <body class="app-page">
   <a class="skip-link" href="#main-content">Saltar al contenido principal</a>
   <div class="app">
-    <aside class="sidebar" aria-label="Barra lateral">
+    <div class="sidebar-backdrop" id="sidebar-backdrop" aria-hidden="true"></div>
+    <aside class="sidebar" id="app-sidebar" aria-label="Barra lateral">
+      <div class="sidebar-mobile-header" aria-hidden="true">
+        <div class="sidebar-brand-compact">
+          <span class="sidebar-brand-title">Magnus SIG</span>
+          <span class="sidebar-brand-subtitle">Gestión Integral</span>
+        </div>
+        <button class="sidebar-close-btn" id="sidebar-close-btn" type="button" aria-label="Cerrar menú">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
       <p class="side-section-label">OPERACIÓN DE SEGURIDAD</p>
       <nav class="primary-nav icon-nav" aria-label="Navegación principal">
         <a class="nav-item {% if request.path == '/dashboard/' %}active{% endif %}" href="{% url 'productos:dashboard' %}" aria-label="Dashboard" title="Dashboard" {% if request.path == '/dashboard/' %}aria-current="page"{% endif %}><span class="ion-nav-icon" data-icon="grid-outline" aria-hidden="true"></span><span class="nav-text">Dashboard</span></a>
@@ -43,6 +56,13 @@
     </aside>
     <div class="main">
       <div class="topbar">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-label="Abrir menú de navegación" aria-expanded="false" aria-controls="app-sidebar">
+          <svg class="hamburger-icon" viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" aria-hidden="true">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
         {% include 'productos/_page_brand.html' %}
         <form class="topbar-search" action="{% url 'productos:lista' %}" method="get" role="search"><label class="sr-only" for="global-product-search">Buscar productos y equipos</label><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><input id="global-product-search" name="q" type="search" placeholder="Buscar productos y equipos de seguridad"></form>
         <div class="topbar-tools"><span class="system-status"><span class="status-indicator" aria-hidden="true"></span>Entorno local</span></div>
