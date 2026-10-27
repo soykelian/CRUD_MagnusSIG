@@ -1,0 +1,52 @@
+{% extends 'productos/base.html' %}
+{% load l10n %}
+{% block title %}{% if editando %}Editar{% else %}Nuevo{% endif %} producto · Magnus SIG{% endblock %}
+{% block content %}
+<div class="crumb"><a href="{% url 'productos:lista' %}">Productos</a>&nbsp; / &nbsp;{% if editando %}Editar producto{% else %}Nuevo producto{% endif %}</div>
+<div class="heading"><div><h1>{% if editando %}Editar producto{% else %}Registrar producto{% endif %}</h1><p>{% if editando %}Actualiza la información técnica y de existencias del producto en MySQL.{% else %}Completa la información para agregar un equipo de seguridad o EPP al inventario.{% endif %}</p></div></div>
+<div class="form-layout"><section class="card form-card"><form id="product-form" method="post" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<p class="field-error" role="alert">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+  <fieldset class="field-group"><legend>Identificación del producto</legend><p class="section-help">Código de identificación único, nombre comercial y descripción técnica.</p>
+    <div class="form-grid">
+      <div class="field"><label for="id_codigo">Código / SKU <span class="required">*</span></label><input id="id_codigo" name="codigo" maxlength="60" autocomplete="off" placeholder="Ej. EPP-CASCO-01" value="{{ form.codigo.value|default_if_none:'' }}" {% if form.codigo.errors %}class="error-control"{% endif %} required>{% for e in form.codigo.errors %}<span class="field-error" role="alert">{{ e }}</span>{% endfor %}</div>
+      <div class="field"><label for="id_nombre">Nombre del producto <span class="required">*</span></label><input id="id_nombre" name="nombre" maxlength="180" autocomplete="off" placeholder="Ej. Casco Dielectrico Tipo II con Barboquejo" value="{{ form.nombre.value|default_if_none:'' }}" {% if form.nombre.errors %}class="error-control"{% endif %} required>{% for e in form.nombre.errors %}<span class="field-error" role="alert">{{ e }}</span>{% endfor %}</div>
+      <div class="field full"><label for="id_descripcion">Descripción técnica</label><textarea id="id_descripcion" name="descripcion" placeholder="Especificaciones, norma técnica de seguridad (ej. ANSI Z89.1), materiales…">{{ form.descripcion.value|default_if_none:'' }}</textarea>{% for e in form.descripcion.errors %}<span class="field-error" role="alert">{{ e }}</span>{% endfor %}</div>
+    </div>
+  </fieldset>
+  <fieldset class="field-group"><legend>Clasificación y Proveedor</legend><p class="section-help">Categoría del SG-SST, unidad de medida y proveedor sugerido.</p>
+    <div class="form-grid">
+      <div class="field"><label for="id_id_categoria">Categoría <span class="required">*</span></label>
+        <select id="id_id_categoria" name="id_categoria" {% if form.id_categoria.errors %}class="error-control"{% endif %} required>
+          <option value="">Selecciona una categoría</option>
+          {% for c in form.fields.id_categoria.queryset %}<option value="{{ c.pk|unlocalize }}" {% if form.id_categoria.value|stringformat:"s" == c.pk|unlocalize %}selected{% endif %}>{{ c.nombre }}</option>{% endfor %}
+        </select>
+        {% for e in form.id_categoria.errors %}<span class="field-error" role="alert">{{ e }}</span>{% endfor %}
+        <a class="hint category-shortcut" href="{% url 'productos:categoria_crear' %}">Crear una categoría</a></div>
+      <div class="field"><label for="id_id_proveedor">Proveedor sugerido</label>
+        <select id="id_id_proveedor" name="id_proveedor" {% if form.id_proveedor.errors %}class="error-control"{% endif %}>
+          <option value="">Selecciona un proveedor (opcional)</option>
+          {% for prov in form.fields.id_proveedor.queryset %}<option value="{{ prov.pk|unlocalize }}" {% if form.id_proveedor.value|stringformat:"s" == prov.pk|unlocalize %}selected{% endif %}>{{ prov.razon_social }}</option>{% endfor %}
+        </select>
+        {% for e in form.id_proveedor.errors %}<span class="field-error" role="alert">{{ e }}</span>{% endfor %}
+        <a class="hint category-shortcut" href="{% url 'productos:proveedor_nuevo' %}">Registrar nuevo proveedor</a></div>
+      <div class="field"><label for="id_unidad_medida">Unidad de medida <span class="required">*</span></label><input id="id_unidad_medida" name="unidad_medida" placeholder="Ej. Unidad, Par, Caja x 50, Kit" value="{{ form.unidad_medida.value|default_if_none:'Unidad' }}" {% if form.unidad_medida.errors %}class="error-control"{% endif %} required>{% for e in form.unidad_medida.errors %}<span class="field-error" role="alert">{{ e }}</span>{% endfor %}</div>
+      <div class="field"><label for="id_estado">Estado en catálogo</label>
+        <select id="id_estado" name="estado">
+          <option value="activo" {% if form.estado.value == 'activo' or not form.estado.value %}selected{% endif %}>Activo</option>
+          <option value="inactivo" {% if form.estado.value == 'inactivo' %}selected{% endif %}>Inactivo</option>
+        </select>
+      </div>
+    </div>
+  </fieldset>
+  <fieldset class="field-group"><legend>Precios y Control de Inventario</legend><p class="section-help">Costos, valor de venta, umbral de alerta y existencias en bodega.</p>
+    <div class="form-grid">
+      <div class="field"><label for="id_precio_compra">Precio de compra (COP) <span class="required">*</span></label><input id="id_precio_compra" name="precio_compra" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Ej. 35000" value="{{ form.precio_compra.value|default_if_none:'0.00'|unlocalize }}" {% if form.precio_compra.errors %}class="error-control"{% endif %} required>{% for e in form.precio_compra.errors %}<span class="field-error" role="alert">{{ e }}</span>{% endfor %}</div>
+      <div class="field"><label for="id_precio_venta">Precio de venta (COP) <span class="required">*</span></label><input id="id_precio_venta" name="precio_venta" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Ej. 55000" value="{{ form.precio_venta.value|default_if_none:'0.00'|unlocalize }}" {% if form.precio_venta.errors %}class="error-control"{% endif %} required>{% for e in form.precio_venta.errors %}<span class="field-error" role="alert">{{ e }}</span>{% endfor %}</div>
+      <div class="field"><label for="id_cantidad">Cantidad disponible en stock <span class="required">*</span></label><input id="id_cantidad" name="cantidad" type="number" min="0" step="1" inputmode="numeric" value="{% if form.cantidad.value is None %}0{% else %}{{ form.cantidad.value|unlocalize }}{% endif %}" {% if form.cantidad.errors %}class="error-control"{% endif %} required>{% for e in form.cantidad.errors %}<span class="field-error" role="alert">{{ e }}</span>{% endfor %}<span class="hint">Existencias físicas guardadas en tabla inventario de MySQL.</span></div>
+      <div class="field"><label for="id_stock_minimo">Stock mínimo de alerta <span class="required">*</span></label><input id="id_stock_minimo" name="stock_minimo" type="number" min="0" step="1" value="{% if form.stock_minimo.value is None %}5{% else %}{{ form.stock_minimo.value|unlocalize }}{% endif %}" {% if form.stock_minimo.errors %}class="error-control"{% endif %} required>{% for e in form.stock_minimo.errors %}<span class="field-error" role="alert">{{ e }}</span>{% endfor %}</div>
+      <div class="field full"><label for="id_ubicacion">Ubicación en bodega</label><input id="id_ubicacion" name="ubicacion" placeholder="Ej. Bodega Principal - Estante B3" value="{{ form.ubicacion.value|default_if_none:'Bodega Principal' }}"></div>
+    </div>
+  </fieldset>
+  <div class="form-actions"><a class="btn secondary" href="{% url 'productos:lista' %}">Cancelar</a><button class="btn primary" type="submit">{% if editando %}Guardar cambios{% else %}Guardar producto{% endif %}</button></div>
+</form></section><aside class="card form-help"><h2>Validaciones activas</h2><p>Requisitos de la base de datos MySQL:</p><ul><li>Código / SKU único</li><li>Nombre y categoría obligatorios</li><li>Precios de compra y venta válidos</li><li>Stock sincronizado con tabla <code>inventario</code></li></ul><p class="form-note">Toda la información persiste directamente en <code>magnussig_inventario</code>.</p></aside></div>
+{% endblock %}

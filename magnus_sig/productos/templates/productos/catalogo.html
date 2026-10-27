@@ -1,0 +1,8 @@
+{% extends 'productos/base.html' %}
+{% block title %}Productos · Magnus SIG{% endblock %}
+{% block content %}
+<div class="heading"><div><h1>Productos</h1><p>Catálogo de productos registrados en el inventario.</p></div>{% if es_administrador %}<a class="btn primary" href="{% url 'productos:crear' %}">Agregar producto</a>{% endif %}</div>
+<div class="catalog-summary"><span><b>{{ total_productos }}</b> productos guardados</span><span><b>{{ total_categorias }}</b> categorías</span></div>
+<form class="toolbar module-toolbar" action="{% url 'productos:catalogo' %}" method="get" role="search" hx-get="{% url 'productos:catalogo' %}" hx-trigger="input changed delay:300ms from:#catalog-search, submit" hx-target="#catalog-results" hx-push-url="true"><div class="filter-search"><label for="catalog-search">Buscar en el catálogo</label><span class="search"><input id="catalog-search" type="search" name="q" value="{{ q }}" placeholder="Nombre o descripción"><button class="search-submit" type="submit">Buscar</button></span></div></form>
+<div id="catalog-results" aria-live="polite" data-aos="fade-up">{% include 'productos/_catalog_results.html' %}</div>
+{% endblock %}

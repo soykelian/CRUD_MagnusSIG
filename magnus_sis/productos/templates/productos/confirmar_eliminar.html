@@ -1,7 +1,0 @@
-{% extends 'productos/base.html' %}
-{% block title %}Eliminar producto · Magnus SIS{% endblock %}
-{% block content %}
-<div class="crumb"><a href="{% url 'productos:lista' %}">Productos</a>&nbsp; / &nbsp;Eliminar producto</div>
-<div class="delete-stage" id="delete-stage"><section class="modal-card" aria-labelledby="delete-title"><h1 id="delete-title">¿Eliminar este producto?</h1><p>Esta acción eliminará el producto del inventario y no se puede deshacer. Confirma que deseas continuar.</p><div class="modal-info"><span><b id="delete-name">{{ producto.nombre }}</b><small id="delete-meta">{{ producto.categoria.nombre }} · $ {{ producto.precio|floatformat:"0g" }} COP · {{ producto.cantidad }} unidades</small></span></div>
-<form method="post" class="modal-buttons">{% csrf_token %}<a class="btn secondary" href="{% url 'productos:lista' %}">Cancelar</a><button class="btn delete-button" id="confirm-delete" type="submit">Sí, eliminar</button></form></section></div>
-{% endblock %}

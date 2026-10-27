@@ -1,0 +1,12 @@
+{% extends 'productos/base.html' %}
+{% block title %}{{ titulo }} · Magnus SIG{% endblock %}
+{% block content %}
+<div class="crumb"><a href="{% url regreso %}">{{ titulo }}</a> / Registro</div>
+<div class="heading"><div><h1>{{ titulo }}</h1><p>Completa la información. Los cambios se guardarán en el inventario.</p></div></div>
+{% if ayuda %}<p class="form-note inventory-rule">{{ ayuda }}</p>{% endif %}
+<div class="form-layout form-layout-single"><section class="card form-card"><form method="post" novalidate>{% csrf_token %}
+{% if form.non_field_errors %}<p class="field-error" role="alert">{{ form.non_field_errors|join:' ' }}</p>{% endif %}
+<div class="form-grid">{% for field in form %}<div class="field {% if field.field.widget.input_type == 'checkbox' %}checkbox-field{% endif %}">{% if field.field.widget.input_type == 'checkbox' %}<label class="check-label" for="{{ field.id_for_label }}">{{ field }} {{ field.label }}</label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="required">*</span>{% endif %}</label>{{ field }}{% endif %}{% if field.help_text %}<span class="hint">{{ field.help_text }}</span>{% endif %}{% for e in field.errors %}<span class="field-error" role="alert">{{ e }}</span>{% endfor %}</div>{% endfor %}</div>
+<div class="form-actions"><a class="btn secondary" href="{% url regreso %}">Cancelar</a><button class="btn primary" type="submit">Guardar</button></div>
+</form></section></div>
+{% endblock %}

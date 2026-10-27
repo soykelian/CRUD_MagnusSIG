@@ -1,0 +1,32 @@
+{% load l10n %}
+<section class="card table-wrap" aria-label="Listado de productos" tabindex="0">
+{% if pagina.object_list %}
+  <table class="table" id="products-table">
+    <caption class="sr-only">Productos registrados en el inventario</caption>
+    <thead><tr><th scope="col">Producto</th><th scope="col">Categoría</th><th scope="col">Precio</th><th scope="col">Existencias</th><th scope="col">Estado</th><th scope="col">{% if es_administrador %}Acciones{% else %}Consulta{% endif %}</th></tr></thead>
+    <tbody id="product-rows">
+    {% for p in pagina %}
+      <tr>
+        <td><div class="product"><span><b>{{ p.nombre }}</b><small>{{ p.codigo }} · {{ p.unidad_medida }}</small></span></div></td>
+        <td>{{ p.id_categoria.nombre }}</td><td>$ {{ p.precio_venta|floatformat:"0g" }}</td><td>{{ p.cantidad }} {{ p.unidad_medida }}s</td>
+        <td><span class="badge {{ p.estado_stock }}">{{ p.estado_etiqueta }}</span></td>
+        <td><div class="actions"><a class="table-action" href="{% url 'productos:detalle' p.pk %}" aria-label="Ver {{ p.nombre }}">Ver</a>
+          {% if es_administrador %}<a class="table-action" href="{% url 'productos:editar' p.pk %}" aria-label="Editar {{ p.nombre }}">Editar</a>{% endif %}</div></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="pagination" id="product-pagination">
+    <span id="product-count" aria-live="polite">Mostrando {{ pagina.start_index }}–{{ pagina.end_index }} de {{ pagina.paginator.count }} productos</span>
+    {% if pagina.paginator.num_pages > 1 %}<nav class="pages" aria-label="Paginación" id="product-pages">
+      {% if pagina.has_previous %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ pagina.previous_page_number|unlocalize }}" hx-get="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ pagina.previous_page_number|unlocalize }}" hx-target="#product-results" hx-push-url="true">Anterior</a>{% endif %}
+      {% for n in pagina.paginator.page_range %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ n|unlocalize }}" hx-get="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ n|unlocalize }}" hx-target="#product-results" hx-push-url="true" {% if n == pagina.number %}class="chosen" aria-current="page"{% endif %}>{{ n }}</a>{% endfor %}
+      {% if pagina.has_next %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ pagina.next_page_number|unlocalize }}" hx-get="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ pagina.next_page_number|unlocalize }}" hx-target="#product-results" hx-push-url="true">Siguiente</a>{% endif %}
+    </nav>{% endif %}
+  </div>
+{% else %}<div class="empty-state" id="product-empty" role="status" aria-live="polite">
+  {% if hay_filtros %}<h2>No encontramos productos</h2><p>Prueba con otra búsqueda o cambia los filtros.</p><a class="btn secondary" href="{% url 'productos:lista' %}">Quitar filtros</a>
+  {% elif total_categorias %}<h2>Aún no hay productos</h2><p>{% if es_administrador %}Tu inventario ya tiene categorías. Registra el primer producto para empezar.{% else %}Aún no hay productos disponibles. Contacta con administración.{% endif %}</p>{% if es_administrador %}<a class="btn primary" href="{% url 'productos:crear' %}">Nuevo producto</a>{% endif %}
+  {% else %}<h2>{% if es_administrador %}Empieza por crear una categoría{% else %}El inventario todavía no está configurado{% endif %}</h2><p>{% if es_administrador %}Crea una categoría para organizar el inventario antes de registrar productos.{% else %}Contacta con administración para configurar las categorías y productos.{% endif %}</p>{% if es_administrador %}<a class="btn primary" href="{% url 'productos:categoria_crear' %}">Crear primera categoría</a>{% endif %}{% endif %}
+</div>{% endif %}
+</section>

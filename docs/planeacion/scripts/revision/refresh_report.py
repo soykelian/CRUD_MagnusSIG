@@ -17,7 +17,7 @@ def makepage(n,title,sub=None):
  b=BytesIO(); c=canvas.Canvas(b,pagesize=(W,H)); c.setFillColor(colors.white); c.rect(0,0,W,H,fill=1,stroke=0)
  c.setFillColor(NAVY); c.setFont('Helvetica-Bold',16); c.drawString(42,H-38,title)
  if sub: c.setFillColor(MUTED); c.setFont('Helvetica',8.5); c.drawString(42,H-55,sub)
- c.setStrokeColor(LINE); c.line(42,H-66,750,H-66); c.line(42,33,750,33); c.setFillColor(MUTED); c.setFont('Helvetica',7); c.drawString(42,20,'Sistema Web de Gestión de Inventario · Magnus SIS'); c.drawRightString(750,20,f'Página {n}')
+ c.setStrokeColor(LINE); c.line(42,H-66,750,H-66); c.line(42,33,750,33); c.setFillColor(MUTED); c.setFont('Helvetica',7); c.drawString(42,20,'Sistema Web de Gestión de Inventario · Magnus SIG'); c.drawRightString(750,20,f'Página {n}')
  return b,c
 def para(c,s,x,top,w,style='body'):
  p=Paragraph(s,styles[style]); _,h=p.wrap(w,500); p.drawOn(c,x,top-h); return top-h
@@ -46,7 +46,7 @@ note(c,'Las vistas y plantillas responden, pero todavía no crean, consultan ni 
 repl[6]=done(b,c)
 # Page 12 current tree and validation evidence.
 b,c=makepage(12,'3. Esqueleto del código y configuración','Estructura existente en el repositorio; los módulos de inventario están implementados como stubs.')
-left='CRUD_MagnusSIS/<br/>├─ .gitignore<br/>├─ README.md<br/>├─ requirements.txt<br/>├─ documento_Sistema.pdf<br/>├─ mockups/<br/>│&nbsp;&nbsp; ├─ mockups-inventario.html<br/>│&nbsp;&nbsp; └─ mockups-inventario.css<br/>└─ magnus_sis/<br/>&nbsp;&nbsp; ├─ manage.py<br/>&nbsp;&nbsp; ├─ magnus_sis/{settings,urls,asgi,wsgi}.py<br/>&nbsp;&nbsp; └─ productos/<br/>&nbsp;&nbsp;&nbsp;&nbsp; ├─ models.py · forms.py · views.py<br/>&nbsp;&nbsp;&nbsp;&nbsp; ├─ urls.py · admin.py · tests.py<br/>&nbsp;&nbsp;&nbsp;&nbsp; ├─ migrations/0001_initial.py<br/>&nbsp;&nbsp;&nbsp;&nbsp; └─ templates/productos/*.html'
+left='CRUD_MagnusSIG/<br/>├─ .gitignore<br/>├─ README.md<br/>├─ requirements.txt<br/>├─ documento_Sistema.pdf<br/>├─ mockups/<br/>│&nbsp;&nbsp; ├─ mockups-inventario.html<br/>│&nbsp;&nbsp; └─ mockups-inventario.css<br/>└─ magnus_sig/<br/>&nbsp;&nbsp; ├─ manage.py<br/>&nbsp;&nbsp; ├─ magnus_sig/{settings,urls,asgi,wsgi}.py<br/>&nbsp;&nbsp; └─ productos/<br/>&nbsp;&nbsp;&nbsp;&nbsp; ├─ models.py · forms.py · views.py<br/>&nbsp;&nbsp;&nbsp;&nbsp; ├─ urls.py · admin.py · tests.py<br/>&nbsp;&nbsp;&nbsp;&nbsp; ├─ migrations/0001_initial.py<br/>&nbsp;&nbsp;&nbsp;&nbsp; └─ templates/productos/*.html'
 para(c,'ESTRUCTURA ACTUAL',42,520,330,'h'); para(c,left,52,488,330,'code')
 para(c,'CONFIGURACIÓN Y VERIFICACIÓN',420,520,330,'h'); para(c,'Django está registrado en INSTALLED_APPS y las rutas de productos están incluidas en el proyecto.<br/><br/>SQLite está configurado para desarrollo. La migración inicial crea Categoria y Producto.<br/><br/><b>Verificado:</b> <font name="Courier">python manage.py check</font> sin errores y dos pruebas de humo aprobadas.',420,488,320)
 note(c,'El esqueleto puede ejecutarse; las operaciones de negocio, búsqueda real y validaciones personalizadas se dejan para la siguiente fase.',420,275,330,57,AMBER)
@@ -132,14 +132,14 @@ para(c,'productos/urls.py',42,520,708,'h'); codebox(c,routes,42,310,708,185); pa
 # Page 16 real schema/config facts, clarify mockup-only fields.
 b,c=makepage(16,'3.4 Estructura de datos y configuración','Migración inicial de SQLite creada para los modelos del esqueleto.')
 para(c,'MODELOS MIGRADOS',42,520,330,'h'); para(c,'<b>Categoria</b>: id, nombre VARCHAR(100), descripcion TEXT opcional.<br/><br/><b>Producto</b>: id, nombre VARCHAR(150), descripcion TEXT opcional, categoria_id FK protegida, precio DECIMAL(10,2), cantidad entero ≥ 0, fecha_creacion y fecha_actualizacion.<br/><br/>Una categoría tiene cero o muchos productos; cada producto pertenece a una categoría.',42,488,330)
-para(c,'CONFIGURACIÓN',420,520,330,'h'); para(c,'<b>Actual:</b> SQLite en <font name="Courier">magnus_sis/settings.py</font>; Django 6.1.x en <font name="Courier">requirements.txt</font>.<br/><br/><b>Objetivo posterior:</b> MySQL mediante Django ORM; el conector y las variables de conexión no están configurados todavía.<br/><br/><b>.gitignore:</b> excluye entornos virtuales, bytecode, bases SQLite y archivos .env.',420,488,330)
+para(c,'CONFIGURACIÓN',420,520,330,'h'); para(c,'<b>Actual:</b> SQLite en <font name="Courier">magnus_sig/settings.py</font>; Django 6.1.x en <font name="Courier">requirements.txt</font>.<br/><br/><b>Objetivo posterior:</b> MySQL mediante Django ORM; el conector y las variables de conexión no están configurados todavía.<br/><br/><b>.gitignore:</b> excluye entornos virtuales, bytecode, bases SQLite y archivos .env.',420,488,330)
 note(c,'SKU, stock mínimo, métricas y paginación de las capturas son solo referencias visuales y aún no están modelados ni calculados.',42,112,708,48,AMBER); repl[15]=done(b,c)
 # Page 17 README and repo link.
 b,c=makepage(17,'README.md · repositorio y estado','Resumen del proyecto y enlace directo al repositorio.')
-para(c,'Sistema Web de Gestión de Inventario · Magnus SIS',42,520,708,'h')
+para(c,'Sistema Web de Gestión de Inventario · Magnus SIG',42,520,708,'h')
 para(c,'<b>Asignatura:</b> Lenguaje de Programación 1 · 2026-2<br/><b>Integrantes:</b> Kevin Julian Sanchez Perez · Juan Jose Osorio Quitian · Luis Esteban Medina · Brayan Steven Sanchez · Sergio Neira · Hilver Galindo',42,490,708)
 para(c,'<b>Estado:</b> Mockup HTML/CSS estático y esqueleto Django con app, modelos, formularios, rutas, vistas, templates, migración y pruebas de humo. Las operaciones CRUD y la lógica de negocio están pendientes.',42,420,708)
-url='https://github.com/kevinsanchezpe-ops/CRUD_MagnusSIS'
+url='https://github.com/soykelian/CRUD_MagnusSIG'
 para(c,'<b>Repositorio:</b>',42,340,708)
 c.setFillColor(NAVY); c.setFont('Helvetica',10); c.drawString(42,310,url); c.setStrokeColor(NAVY); c.line(42,308,42+c.stringWidth(url,'Helvetica',10),308)
 note(c,'Verificación local: `python manage.py check` y `python manage.py test productos` completan sin errores.',42,205,708,52); repl[16]=done(b,c)

@@ -73,7 +73,7 @@ def label_para(label,text):
 
 # Header and footer
 header=sec.header.paragraphs[0]; header.alignment=WD_ALIGN_PARAGRAPH.RIGHT
-r=header.add_run('MAGNUS SIS  |  DOCUMENTO DE PLANEACIÓN'); r.font.name='Aptos'; r.font.size=Pt(8); r.font.bold=True; r.font.color.rgb=RGBColor.from_string(MUTED)
+r=header.add_run('MAGNUS SIG  |  DOCUMENTO DE PLANEACIÓN'); r.font.name='Aptos'; r.font.size=Pt(8); r.font.bold=True; r.font.color.rgb=RGBColor.from_string(MUTED)
 footer=sec.footer.paragraphs[0]; footer.alignment=WD_ALIGN_PARAGRAPH.CENTER
 rr=footer.add_run('Lenguaje de Programación 1 · 2026-2  |  '); rr.font.size=Pt(8); rr.font.color.rgb=RGBColor.from_string(MUTED)
 fld=OxmlElement('w:fldSimple'); fld.set(qn('w:instr'),'PAGE'); footer._p.append(fld)
@@ -100,7 +100,7 @@ last=t.cell(3,1); set_cell_text(last,'',size=9); shade(last,WHITE)
 p=doc.add_paragraph(); p.alignment=WD_ALIGN_PARAGRAPH.CENTER; p.paragraph_format.space_before=Pt(15)
 r=p.add_run('Repositorio del proyecto'); r.bold=True; r.font.color.rgb=RGBColor.from_string(MUTED); r.font.size=Pt(9)
 p=doc.add_paragraph(); p.alignment=WD_ALIGN_PARAGRAPH.CENTER; p.paragraph_format.space_after=Pt(3)
-r=p.add_run('https://github.com/kevinsanchezpe-ops/CRUD_MagnusSIS'); r.font.size=Pt(9); r.font.color.rgb=RGBColor.from_string(BLUE); r.underline=True
+r=p.add_run('https://github.com/soykelian/CRUD_MagnusSIG'); r.font.size=Pt(9); r.font.color.rgb=RGBColor.from_string(BLUE); r.underline=True
 p=doc.add_paragraph(); p.alignment=WD_ALIGN_PARAGRAPH.CENTER
 r=p.add_run('Propuesta inicial · Octubre de 2026'); r.font.size=Pt(9); r.font.color.rgb=RGBColor.from_string(MUTED)
 
@@ -108,7 +108,7 @@ doc.add_page_break()
 # 1 Project foundation
 h=doc.add_heading('1. Fundamentación del proyecto',level=1)
 doc.add_heading('Título y descripción',level=2)
-doc.add_paragraph('El Sistema Web de Gestión de Inventario Magnus SIS permitirá organizar productos y categorías desde una aplicación web. Busca reducir la dispersión de la información de inventario y facilitar la consulta de existencias, precios y descripciones en un punto común.')
+doc.add_paragraph('El Sistema Web de Gestión de Inventario Magnus SIG permitirá organizar productos y categorías desde una aplicación web. Busca reducir la dispersión de la información de inventario y facilitar la consulta de existencias, precios y descripciones en un punto común.')
 doc.add_heading('Objetivo general',level=2)
 doc.add_paragraph('Desarrollar un sistema web de inventario que permita registrar, consultar, buscar, actualizar y eliminar productos, así como organizarlos por categorías y controlar sus cantidades disponibles.')
 doc.add_heading('Objetivos específicos',level=2)
@@ -169,7 +169,7 @@ tech=[
  ('Base de datos','SQLite para desarrollo local, ya configurado. MySQL es la alternativa objetivo y requiere configuración posterior.'),
  ('Librerías y componentes','Django y sus componentes incluidos. Bootstrap podría evaluarse para acelerar estilos responsivos; el prototipo actual está hecho con HTML y CSS propios y no depende de Bootstrap ni JavaScript.'),
  ('IDE y herramientas','Visual Studio Code como entorno propuesto; Git y GitHub para control de versiones y coordinación.'),
- ('Repositorio','https://github.com/kevinsanchezpe-ops/CRUD_MagnusSIS')]
+ ('Repositorio','https://github.com/soykelian/CRUD_MagnusSIG')]
 t=doc.add_table(rows=1,cols=2); t.style='Table Grid'
 for i,v in enumerate(['Componente','Selección y justificación']): set_cell_text(t.rows[0].cells[i],v,bold=True,color=WHITE,size=8); shade(t.rows[0].cells[i],BLUE)
 for row in tech:
@@ -213,8 +213,8 @@ style_table(t,[1.75,1.1,1.1,1.4,1.5],header=True,font_size=7.4)
 
 # Document properties
 doc.core_properties.title='Entrega 0 de Proyecto de Aula - Fase de Planeación'
-doc.core_properties.subject='Sistema Web de Gestión de Inventario Magnus SIS'
-doc.core_properties.author='Equipo de proyecto Magnus SIS'
+doc.core_properties.subject='Sistema Web de Gestión de Inventario Magnus SIG'
+doc.core_properties.author='Equipo de proyecto Magnus SIG'
 doc.core_properties.keywords='planeación, inventario, Django, Kanban'
 OUT.parent.mkdir(parents=True, exist_ok=True)
 doc.save(OUT)

@@ -1,0 +1,55 @@
+{% extends 'productos/base.html' %}
+{% load l10n %}
+{% block title %}Productos · Magnus SIG{% endblock %}
+{% block content %}
+<div class="crumb"><span class="sr-only">Estás en:</span> Inicio&nbsp; / &nbsp;Productos</div>
+<div class="heading"><div><h1>Productos</h1><p>{% if es_administrador %}Administra equipos de protección, dotación y elementos de seguridad.{% else %}Consulta los equipos de protección y las existencias disponibles.{% endif %}</p></div>{% if es_administrador %}<a class="btn primary" href="{% url 'productos:crear' %}">Nuevo producto</a>{% endif %}</div>
+<div class="inventory-dashboard">
+<div class="inventory-primary">
+<div class="stat-grid">
+  <article class="card stat"><span class="label">Productos registrados</span><strong id="stat-products">{{ total_productos }}</strong><small>En todas las categorías</small></article>
+  <article class="card stat"><span class="label">Categorías</span><strong id="stat-categories">{{ total_categorias }}</strong><small>Clasificaciones activas</small></article>
+  <article class="card stat{% if total_stock_bajo %} attention{% endif %}"><span class="label">Stock bajo</span><strong id="stat-low-stock">{{ total_stock_bajo }}</strong><small>Productos por revisar</small></article>
+</div>
+<form class="toolbar" action="{% url 'productos:lista' %}" method="get" role="search" hx-get="{% url 'productos:lista' %}" hx-trigger="input changed delay:300ms from:#product-search, change from:select, submit" hx-target="#product-results" hx-push-url="true">
+  <div class="filter-search"><label for="product-search">Buscar productos</label><span class="search"><input id="product-search" name="q" type="search" value="{{ q }}" placeholder="Nombre o descripción"><button class="search-submit" type="submit">Buscar</button></span></div>
+  <div class="filters">
+    <label class="filter-field"><span>Categoría</span>
+      <select class="select-mini" id="filter-category" name="categoria" data-autosubmit>
+        <option value="">Todas las categorías</option>
+        {% for c in categorias %}<option value="{{ c.pk|unlocalize }}" {% if categoria_sel == c.pk|unlocalize %}selected{% endif %}>{{ c.nombre }}</option>{% endfor %}
+      </select></label>
+    <label class="filter-field"><span>Existencias</span>
+      <select class="select-mini" id="filter-stock" name="existencias" data-autosubmit>
+        <option value="">Todos los estados</option>
+        <option value="ok" {% if existencias_sel == 'ok' %}selected{% endif %}>Disponible</option>
+        <option value="low" {% if existencias_sel == 'low' %}selected{% endif %}>Stock bajo</option>
+        <option value="attention" {% if existencias_sel == 'attention' %}selected{% endif %}>Stock bajo o agotado</option>
+        <option value="out" {% if existencias_sel == 'out' %}selected{% endif %}>Agotado</option>
+      </select></label>
+  </div>
+</form>
+<div id="product-results" aria-live="polite" data-aos="fade-up">{% include 'productos/_product_results.html' %}</div>
+</div>
+<aside class="inventory-rail" aria-label="Resumen del inventario">
+  <section class="stock-panel" aria-labelledby="stock-panel-title">
+    <div class="stock-panel-heading"><div><p class="rail-eyebrow">SEGUIMIENTO</p><h2 id="stock-panel-title">Stock por revisar</h2></div><span class="stock-total">{{ total_stock_bajo|add:total_agotados }}</span></div>
+    <p class="stock-panel-copy">Revisa agotados y existencias bajas (hasta {{ nivel_minimo_stock }} unidades).</p>
+    <div class="stock-summary"><span>Agotados</span><b>{{ total_agotados }}</b></div>
+    <div class="stock-summary"><span>Stock bajo</span><b>{{ total_stock_bajo }}</b></div>
+    {% if productos_revision %}
+    <ul class="stock-watch-list">
+      {% for p in productos_revision %}
+      <li><a href="{% url 'productos:detalle' p.pk %}"><span class="watch-product"><b>{{ p.nombre }}</b><small>{{ p.categoria.nombre }}</small></span><span class="watch-quantity {% if p.cantidad == 0 %}watch-out{% else %}watch-low{% endif %}">{% if p.cantidad == 0 %}Agotado{% else %}{{ p.cantidad }} un.{% endif %}</span></a></li>
+      {% endfor %}
+    </ul>
+    {% elif not total_productos %}
+    <p class="stock-empty">Aún no hay productos en el inventario.</p>
+    {% else %}
+    <p class="stock-empty">Todo el inventario está por encima del nivel mínimo.</p>
+    {% endif %}
+  </section>
+
+</aside>
+</div>
+{% endblock %}

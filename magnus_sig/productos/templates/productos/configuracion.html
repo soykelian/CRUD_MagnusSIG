@@ -1,0 +1,6 @@
+{% extends 'productos/base.html' %}
+{% block title %}Configuración · Magnus SIG{% endblock %}
+{% block content %}
+<div class="heading"><div><h1>Configuración</h1><p>Preferencias que se aplican a este inventario.</p></div></div>
+<div class="form-layout form-layout-single"><section class="card form-card"><form method="post">{% csrf_token %}<fieldset class="field-group"><legend>Preferencias del inventario</legend><p class="section-help">Estos valores se guardan en la base de datos del sistema.</p><div class="form-grid">{% for field in form %}<div class="field {% if field.field.widget.input_type == 'checkbox' %}checkbox-field{% endif %}">{% if field.field.widget.input_type == 'checkbox' %}<label class="check-label" for="{{ field.id_for_label }}">{{ field }} {{ field.label }}</label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}{% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>{% endfor %}</div></fieldset><div class="form-actions"><button class="btn primary" type="submit">Guardar cambios</button></div></form></section></div>
+{% endblock %}

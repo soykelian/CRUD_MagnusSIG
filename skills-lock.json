@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "django-development": {
+      "source": "rcgsheffield/skills",
+      "sourceType": "github",
+      "skillPath": "skills/django-development/SKILL.md",
+      "computedHash": "8f05fa3991fae1bc1cb9ff42f5adab01018737f7b927b66c7a5ecd8522614318"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "106acf230014cbb43ca34e6410371321b56ca742f9ee0442e8ec05bf02eb0384"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{% extends 'productos/base.html' %}
+{% block title %}{% if editando %}Editar{% else %}Nueva{% endif %} categoría · Magnus SIG{% endblock %}
+{% block content %}
+<div class="crumb"><a href="{% url 'productos:categorias' %}">Categorías</a>&nbsp; / &nbsp;{% if editando %}Editar categoría{% else %}Nueva categoría{% endif %}</div>
+<div class="heading"><div><h1>{% if editando %}Editar categoría{% else %}Nueva categoría{% endif %}</h1><p>Agrupa productos con características similares.</p></div></div>
+<div class="form-layout form-layout-single"><section class="card form-card"><form method="post" novalidate>{% csrf_token %}
+  <div class="form-grid">
+    <div class="field full"><label for="nombre">Nombre de la categoría <span class="required">*</span></label><input id="nombre" name="nombre" maxlength="100" value="{{ form.nombre.value|default_if_none:'' }}" placeholder="Ej. Periféricos" {% if form.nombre.errors %}class="error-control"{% endif %} required>{% for e in form.nombre.errors %}<span class="field-error" role="alert">{{ e }}</span>{% endfor %}</div>
+    <div class="field full"><label for="descripcion">Descripción <span class="hint">Opcional</span></label><textarea id="descripcion" name="descripcion" maxlength="300" placeholder="Qué tipo de productos pertenecen aquí">{{ form.descripcion.value|default_if_none:'' }}</textarea></div>
+  </div>
+  <div class="form-actions"><a class="btn secondary" href="{% url 'productos:categorias' %}">Cancelar</a><button class="btn primary" type="submit">{% if editando %}Guardar cambios{% else %}Crear categoría{% endif %}</button></div>
+</form></section></div>
+{% endblock %}

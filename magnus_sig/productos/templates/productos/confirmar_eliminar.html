@@ -1,0 +1,7 @@
+{% extends 'productos/base.html' %}
+{% block title %}Eliminar producto · Magnus SIG{% endblock %}
+{% block content %}
+<div class="crumb"><a href="{% url 'productos:lista' %}">Productos</a>&nbsp; / &nbsp;Eliminar producto</div>
+<div class="delete-stage" id="delete-stage"><section class="modal-card" aria-labelledby="delete-title"><h1 id="delete-title">{% if tiene_historial %}Producto protegido{% else %}¿Eliminar este producto?{% endif %}</h1>{% if tiene_historial %}<p>Este producto tiene movimientos, entradas o salidas asociados. Se conserva para proteger la trazabilidad del inventario.</p>{% else %}<p>Esta acción eliminará el producto del inventario y no se puede deshacer. Confirma que deseas continuar.</p>{% endif %}<div class="modal-info"><span><b id="delete-name">{{ producto.nombre }}</b><small id="delete-meta">{{ producto.categoria.nombre }} · $ {{ producto.precio|floatformat:"0g" }} COP · {{ producto.cantidad }} unidades</small></span></div>
+{% if tiene_historial %}<div class="modal-buttons"><a class="btn secondary" href="{% url 'productos:detalle' producto.pk %}">Volver al producto</a><a class="btn primary" href="{% url 'productos:editar' producto.pk %}">Editar producto</a></div>{% else %}<form method="post" class="modal-buttons">{% csrf_token %}<a class="btn secondary" href="{% url 'productos:lista' %}">Cancelar</a><button class="btn delete-button" id="confirm-delete" type="submit">Sí, eliminar</button></form>{% endif %}</section></div>
+{% endblock %}

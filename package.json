@@ -1,28 +1,37 @@
 {
-  "name": "crud_magnussis",
+  "name": "crud_magnussig",
   "version": "1.0.0",
-  "description": "Sistema académico de gestión de inventario desarrollado por el equipo del curso. Interfaz Django conectada a una base de datos SQLite local con CRUD de productos y categorías.",
+  "description": "Magnus SIG: sistema de inventario y equipos de seguridad laboral desarrollado con Django.",
   "main": "index.js",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "css:build": "tailwindcss -i ./magnus_sis/frontend/tailwind.css -o ./magnus_sis/productos/static/productos/tailwind.generated.css --minify",
-    "css:watch": "tailwindcss -i ./magnus_sis/frontend/tailwind.css -o ./magnus_sis/productos/static/productos/tailwind.generated.css --watch --poll=1000"
+    "css:build": "tailwindcss -i ./magnus_sig/frontend/tailwind.css -o ./magnus_sig/productos/static/productos/tailwind.generated.css --minify",
+    "css:watch": "tailwindcss -i ./magnus_sig/frontend/tailwind.css -o ./magnus_sig/productos/static/productos/tailwind.generated.css --watch --poll=1000",
+    "motion:build": "esbuild ./magnus_sig/frontend/motion.js --bundle --splitting --format=esm --minify --outdir=./magnus_sig/productos/static/productos/build --entry-names=motion --chunk-names=chunks/[name]-[hash]"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kevinsanchezpe-ops/CRUD_MagnusSIS.git"
+    "url": "git+https://github.com/soykelian/CRUD_MagnusSIG.git"
   },
   "keywords": [],
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/kevinsanchezpe-ops/CRUD_MagnusSIS/issues"
+    "url": "https://github.com/soykelian/CRUD_MagnusSIG/issues"
   },
-  "homepage": "https://github.com/kevinsanchezpe-ops/CRUD_MagnusSIS#readme",
+  "homepage": "https://github.com/soykelian/CRUD_MagnusSIG#readme",
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.3",
+    "esbuild": "^0.28.2",
     "tailwindcss": "^4.3.3"
+  },
+  "dependencies": {
+    "aos": "^2.3.4",
+    "gsap": "^3.15.0",
+    "htmx.org": "^2.0.11",
+    "lenis": "^1.3.27",
+    "three": "^0.186.1"
   }
 }

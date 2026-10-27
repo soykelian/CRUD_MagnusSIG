@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 300" role="img" aria-labelledby="title desc">
+  <title id="title">Magnus SIG</title>
+  <desc id="desc">Asesoría e Ingeniería en Sistemas Integrados de Gestión</desc>
+  <g transform="translate(228 12)">
+    <circle cx="82" cy="20" r="15" fill="#269DD8"/>
+    <path d="M55 42q27 16 54 0l13 26q-40 20-80 0z" fill="#269DD8"/>
+    <path d="M57 70q25 12 50 0l-7 32q-18 12-36 0z" fill="#269DD8"/>
+    <circle cx="89" cy="151" r="15" fill="#269DD8"/>
+    <path d="M63 127q26-14 52 0l-12 23q-14 10-28 0z" fill="#269DD8"/>
+    <circle cx="8" cy="83" r="15" fill="#2E3192"/>
+    <path d="M35 56q-13 28 0 56l28-10q12-18 0-36z" fill="#2E3192" opacity=".9"/>
+    <circle cx="156" cy="83" r="15" fill="#2E3192"/>
+    <path d="M129 56q13 28 0 56l-28-10q-12-18 0-36z" fill="#2E3192" opacity=".9"/>
+    <path d="M65 73q17 8 34 0v20q-17 8-34 0z" fill="#fff"/>
+  </g>
+  <text x="12" y="246" font-family="Arial, Helvetica, sans-serif" font-size="87" font-weight="700" letter-spacing="-3" fill="#2E3192">MAGNUS</text>
+  <path d="M430 164v92" stroke="#202020" stroke-width="4"/>
+  <text x="444" y="246" font-family="Arial, Helvetica, sans-serif" font-size="77" font-weight="300" letter-spacing="-2" fill="#FF931E">SIG</text>
+  <text x="310" y="282" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400" fill="#888">Asesoría e Ingeniería en Sistemas Integrados de Gestión</text>
+</svg>

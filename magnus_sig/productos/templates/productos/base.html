@@ -1,0 +1,61 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#303030">
+  <title>{% block title %}Inventario · Magnus SIG{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'productos/tailwind.generated.css' %}">
+  <link rel="stylesheet" href="{% static 'productos/nexo-ui.css' %}?v=9">
+  <link rel="stylesheet" href="{% static 'productos/magnus-reference.css' %}?v=39">
+  <link rel="stylesheet" href="{% static 'productos/build/motion.css' %}?v=1">
+  <script type="module" src="{% static 'productos/build/motion.js' %}?v=1"></script>
+  <script src="{% static 'productos/app.js' %}?v=3" defer></script>
+  <style>
+    .inline-form{display:inline;margin:0}
+    .inline-form button{font:inherit;cursor:pointer}
+  </style>
+</head>
+<body class="app-page">
+  <a class="skip-link" href="#main-content">Saltar al contenido principal</a>
+  <div class="app">
+    <aside class="sidebar" aria-label="Barra lateral">
+      <p class="side-section-label">OPERACIÓN DE SEGURIDAD</p>
+      <nav class="primary-nav icon-nav" aria-label="Navegación principal">
+        <a class="nav-item {% if request.path == '/dashboard/' %}active{% endif %}" href="{% url 'productos:dashboard' %}" aria-label="Dashboard" title="Dashboard" {% if request.path == '/dashboard/' %}aria-current="page"{% endif %}><span class="ion-nav-icon" data-icon="grid-outline" aria-hidden="true"></span><span class="nav-text">Dashboard</span></a>
+        <a class="nav-item {% if request.path == '/' %}active{% endif %}" href="{% url 'productos:lista' %}" aria-label="Inventario" title="Inventario" {% if request.path == '/' %}aria-current="page"{% endif %}><span class="ion-nav-icon" data-icon="file-tray-stacked-outline" aria-hidden="true"></span><span class="nav-text">Inventario</span></a>
+        <a class="nav-item {% if request.path == '/productos/' or request.path|slice:":10" == '/productos/' and request.path != '/productos/nuevo/' %}active{% endif %}" href="{% url 'productos:catalogo' %}" aria-label="Productos" title="Productos" {% if request.path == '/productos/' %}aria-current="page"{% endif %}><span class="ion-nav-icon" data-icon="cube-outline" aria-hidden="true"></span><span class="nav-text">Productos</span></a>
+        <a class="nav-item {% if request.path == '/categorias/' or request.path|slice:":11" == '/categorias/' %}active{% endif %}" href="{% url 'productos:categorias' %}" aria-label="Categorías" title="Categorías" {% if request.path == '/categorias/' or request.path|slice:":11" == '/categorias/' %}aria-current="page"{% endif %}><span class="ion-nav-icon" data-icon="layers-outline" aria-hidden="true"></span><span class="nav-text">Categorías</span></a>
+        <a class="nav-item {% if request.path|slice:":12" == '/movimientos' %}active{% endif %}" href="{% url 'productos:movimientos' %}" aria-label="Movimientos" title="Movimientos" {% if request.path|slice:":12" == '/movimientos' %}aria-current="page"{% endif %}><span class="ion-nav-icon" data-icon="swap-horizontal-outline" aria-hidden="true"></span><span class="nav-text">Movimientos</span></a>
+        {% if es_administrador %}<a class="nav-item {% if request.path|slice:":9" == '/entradas' %}active{% endif %}" href="{% url 'productos:entradas' %}" aria-label="Entradas" title="Entradas" {% if request.path|slice:":9" == '/entradas' %}aria-current="page"{% endif %}><span class="ion-nav-icon" data-icon="enter-outline" aria-hidden="true"></span><span class="nav-text">Entradas</span></a>{% endif %}
+        <a class="nav-item {% if request.path|slice:":8" == '/salidas' %}active{% endif %}" href="{% url 'productos:salidas' %}" aria-label="Salidas" title="Salidas" {% if request.path|slice:":8" == '/salidas' %}aria-current="page"{% endif %}><span class="ion-nav-icon" data-icon="log-out-outline" aria-hidden="true"></span><span class="nav-text">Salidas</span></a>
+        {% if es_administrador %}<a class="nav-item {% if request.path|slice:":12" == '/proveedores' %}active{% endif %}" href="{% url 'productos:proveedores' %}" aria-label="Proveedores" title="Proveedores"><span class="ion-nav-icon" data-icon="business-outline" aria-hidden="true"></span><span class="nav-text">Proveedores</span></a>{% endif %}
+        <a class="nav-item {% if request.path|slice:":9" == '/clientes' %}active{% endif %}" href="{% url 'productos:clientes' %}" aria-label="Clientes" title="Clientes" {% if request.path|slice:":9" == '/clientes' %}aria-current="page"{% endif %}><span class="ion-nav-icon" data-icon="people-outline" aria-hidden="true"></span><span class="nav-text">Clientes</span></a>
+        <a class="nav-item {% if request.path|slice:":10" == '/servicios' %}active{% endif %}" href="{% url 'productos:servicios' %}" aria-label="Servicios SG-SST" title="Servicios SG-SST" {% if request.path|slice:":10" == '/servicios' %}aria-current="page"{% endif %}><span class="ion-nav-icon" data-icon="options-outline" aria-hidden="true"></span><span class="nav-text">Servicios</span></a>
+        {% if es_administrador %}<a class="nav-item {% if request.path|slice:":9" == '/reportes' %}active{% endif %}" href="{% url 'productos:reportes' %}" aria-label="Reportes" title="Reportes" {% if request.path|slice:":9" == '/reportes' %}aria-current="page"{% endif %}><span class="ion-nav-icon" data-icon="bar-chart-outline" aria-hidden="true"></span><span class="nav-text">Reportes</span></a>
+        {% endif %}
+        {% if es_administrador and user.is_staff %}<a class="nav-item admin-nav-item" href="{% url 'admin:index' %}" aria-label="Administración Django" title="Administración Django"><span class="ion-nav-icon" data-icon="settings-outline" aria-hidden="true"></span><span class="nav-text">Administración Django</span></a>{% endif %}
+      </nav>
+      <div class="side-foot">
+        <form method="post" action="{% url 'productos:logout' %}">{% csrf_token %}<button class="logout-button" type="submit" aria-label="Cerrar sesión" title="Cerrar sesión"><span class="ion-nav-icon" data-icon="log-out-outline" aria-hidden="true"></span><span>Cerrar sesión</span></button></form>
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        {% include 'productos/_page_brand.html' %}
+        <form class="topbar-search" action="{% url 'productos:lista' %}" method="get" role="search"><label class="sr-only" for="global-product-search">Buscar productos y equipos</label><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><input id="global-product-search" name="q" type="search" placeholder="Buscar productos y equipos de seguridad"></form>
+        <div class="topbar-tools"><span class="system-status"><span class="status-indicator" aria-hidden="true"></span>Entorno local</span></div>
+      </div>
+      <main class="content" id="main-content" tabindex="-1">
+        {% if messages %}
+        <div class="messages" role="status" aria-live="polite">
+          {% for message in messages %}<p class="message {{ message.tags }}">{{ message }}</p>{% endfor %}
+        </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,62 @@
+{% extends 'productos/base.html' %}
+{% block title %}Dashboard · Magnus SIG{% endblock %}
+{% block content %}
+<header class="dashboard-welcome">
+  <div><p class="dashboard-kicker">RESUMEN DEL INVENTARIO</p><h1>Hola, {{ user.get_username }}</h1><p>Este es el estado actual de tus equipos de protección y dotación.</p></div>
+  {% if es_administrador %}<div class="dashboard-actions"><a class="btn secondary" href="{% url 'productos:categoria_crear' %}">Crear categoría</a>{% if total_categorias %}<a class="btn primary" href="{% url 'productos:crear' %}">Añadir producto</a>{% endif %}</div>{% endif %}
+</header>
+
+<div class="dashboard-showcase">
+  <section class="surface-panel balance-panel" aria-labelledby="balance-title">
+    <div class="surface-panel-heading"><div><p class="dashboard-kicker">EXISTENCIAS ACTUALES</p><h2 id="balance-title">Estado del inventario</h2></div><a class="round-link" href="{% url 'productos:lista' %}" aria-label="Ver inventario" title="Ver inventario"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div>
+    <div class="balance-total"><strong>{{ total_unidades }}</strong><span>unidades disponibles</span></div>
+    <div class="inventory-status-list">
+      <div class="inventory-status-row"><span><i class="status-dot healthy"></i>Stock suficiente</span><b>{{ total_stock_saludable }}</b><div class="inventory-meter"><i class="healthy-meter" style="width:{% widthratio total_stock_saludable total_productos 100 %}%"></i></div></div>
+      <div class="inventory-status-row"><span><i class="status-dot caution"></i>Stock bajo</span><b>{{ total_stock_bajo }}</b><div class="inventory-meter"><i class="caution-meter" style="width:{% widthratio total_stock_bajo total_productos 100 %}%"></i></div></div>
+      <div class="inventory-status-row"><span><i class="status-dot depleted"></i>Agotados</span><b>{{ total_agotados }}</b><div class="inventory-meter"><i class="depleted-meter" style="width:{% widthratio total_agotados total_productos 100 %}%"></i></div></div>
+    </div>
+    {% if hay_actividad_periodo %}
+    <div class="balance-trend-meta"><span>Movimiento neto del periodo · {% if variacion_neta_periodo > 0 %}+{% endif %}{{ variacion_neta_periodo }} uds.</span><span>{{ total_entradas_periodo }} entradas · {{ total_salidas_periodo }} salidas</span></div>
+    <div class="balance-chart-legend" aria-label="Series del gráfico">{% if es_administrador %}<span><i class="chart-key chart-key-entry"></i>Entradas</span>{% endif %}<span><i class="chart-key chart-key-exit"></i>{% if es_administrador %}Salidas{% else %}Tus salidas{% endif %}</span></div>
+    <svg class="balance-sparkline" viewBox="0 0 900 190" preserveAspectRatio="none" role="img" aria-label="{% if es_administrador %}Gráfico de líneas que compara las unidades de entrada y salida{% else %}Gráfico de líneas con tus unidades de salida{% endif %} durante el periodo seleccionado">
+      <g class="balance-chart-grid" aria-hidden="true"><line x1="48" y1="30" x2="895" y2="30"/><line x1="48" y1="95" x2="895" y2="95"/><line x1="48" y1="160" x2="895" y2="160"/><text x="0" y="34">{{ escala_grafico }}</text><text x="0" y="99">{{ escala_media }}</text><text x="0" y="164">0</text></g>
+      {% if es_administrador %}<polyline class="balance-line balance-line-entry" points="{% for punto in datos_linea %}{{ punto.x }},{{ punto.y_entradas }}{% if not forloop.last %} {% endif %}{% endfor %}"/>{% endif %}
+      <polyline class="balance-line balance-line-exit" points="{% for punto in datos_linea %}{{ punto.x }},{{ punto.y_salidas }}{% if not forloop.last %} {% endif %}{% endfor %}"/>
+    </svg>
+    <div class="balance-chart-axis {% if periodo == '1a' %}balance-chart-axis-monthly{% endif %}" aria-hidden="true">{% for etiqueta in etiquetas_linea %}<span>{{ etiqueta.texto }}</span>{% endfor %}</div>
+    <ul class="sr-only" aria-label="Valores del gráfico de movimientos">{% for punto in datos_linea %}<li>{{ punto.etiqueta }}: {% if es_administrador %}{{ punto.entradas }} entradas y {% endif %}{{ punto.salidas }} {% if es_administrador %}salidas{% else %}salidas tuyas{% endif %}.</li>{% endfor %}</ul>
+    <nav class="trend-periods" aria-label="Periodo de movimientos">{% for clave,dias in periodos.items %}<a href="{% url 'productos:dashboard' %}?periodo={{ clave }}" class="{% if periodo == clave %}selected{% endif %}" {% if periodo == clave %}aria-current="page"{% endif %}>{% if clave == '7d' %}7 días{% elif clave == '30d' %}30 días{% elif clave == '90d' %}90 días{% else %}1 año{% endif %}</a>{% endfor %}</nav>{% else %}<div class="balance-empty">El historial de existencias aparecerá cuando registres movimientos.</div>{% endif %}
+  </section>
+
+  <div class="dashboard-side-stack {% if not es_administrador %}seller-dashboard-stack{% endif %}">
+  <section class="feature-panel" aria-labelledby="feature-title">
+    <div class="feature-panel-top"><span class="feature-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg></span><span>Magnus SIG · Inventario</span></div>
+    {% if es_administrador %}<p class="feature-label">VALOR ESTIMADO</p><h2 id="feature-title">Valor de existencias</h2><strong class="feature-value">$ {{ valor_inventario|default:0|floatformat:'0g' }}<small> COP</small></strong><p class="feature-note">Precio unitario por existencias actuales.</p>{% else %}<p class="feature-label">STOCK DISPONIBLE</p><h2 id="feature-title">Unidades en inventario</h2><strong class="feature-value">{{ total_unidades }}<small> unidades</small></strong><p class="feature-note">Consulta las existencias actuales del catálogo.</p>{% endif %}
+    <div class="feature-divider"></div><div class="feature-facts"><div><span>Productos</span><b>{{ total_productos }}</b></div><div><span>Categorías</span><b>{{ total_categorias }}</b></div><div><span>Por revisar</span><b>{{ total_requieren_atencion }}</b></div></div>
+    <a class="feature-link" href="{% url 'productos:lista' %}">Abrir inventario <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+  </section>
+
+  {% if es_administrador %}<section class="surface-panel health-panel" aria-labelledby="health-title">
+    <div class="surface-panel-heading"><div><h2 id="health-title">Analítica de stock</h2></div></div>
+    {% if total_productos %}<div class="health-gauge-wrap"><svg class="health-gauge" viewBox="0 0 180 112" role="img" aria-label="{{ porcentaje_stock_saludable }} por ciento de productos con stock suficiente"><path class="health-gauge-track" d="M18 96 A72 72 0 0 1 162 96" pathLength="100"/><path class="health-gauge-value" d="M18 96 A72 72 0 0 1 162 96" pathLength="100" stroke-dasharray="{{ porcentaje_stock_saludable }} 100"/></svg><div class="health-gauge-copy"><strong>{{ porcentaje_stock_saludable }}%</strong><span>Stock suficiente</span></div></div>
+    <div class="health-legend"><span><i class="healthy"></i>En nivel <b>{{ total_stock_saludable }}</b></span><span><i class="caution"></i>Revisar <b>{{ total_requieren_atencion }}</b></span></div>{% else %}<div class="health-empty"><strong>Sin productos registrados</strong><span>El indicador se calculará al crear el catálogo.</span></div>{% endif %}
+    {% if total_requieren_atencion %}<a class="health-action" href="{% url 'productos:lista' %}?existencias=attention">Ver productos por revisar <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>{% else %}<a class="health-action" href="{% url 'productos:lista' %}">Ver catálogo <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a>{% endif %}
+  </section>{% endif %}
+  </div>
+</div>
+
+<div class="dashboard-lower-grid" data-aos="fade-up">
+  <section class="surface-panel transaction-panel" aria-labelledby="recent-movements-title">
+    <div class="surface-panel-heading"><div><h2 id="recent-movements-title">Movimientos recientes</h2><p>Últimos cambios registrados en existencias</p></div><a class="panel-link" href="{% url 'productos:movimientos' %}">Ver todos <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a></div>
+    {% if movimientos_recientes %}<div class="transaction-list">{% for m in movimientos_recientes %}<a class="transaction-row" href="{% url 'productos:detalle' m.producto.pk %}"><span class="transaction-icon {% if m.tipo == 'entrada' %}entry-icon{% elif m.tipo == 'salida' %}exit-icon{% else %}adjustment-icon{% endif %}" aria-hidden="true"><svg viewBox="0 0 24 24">{% if m.tipo == 'entrada' %}<path d="M12 5v14M5 12h14"/>{% elif m.tipo == 'salida' %}<path d="M5 12h14M12 5l7 7-7 7"/>{% else %}<path d="M5 12h14"/><circle cx="12" cy="12" r="8"/>{% endif %}</svg></span><span class="transaction-copy"><b>{{ m.producto.nombre }}</b><small>{{ m.get_tipo_display }} · {{ m.fecha|date:'d M Y, H:i' }}</small></span><strong class="transaction-amount">{{ m.cantidad|stringformat:'+d' }} <small>un.</small></strong></a>{% endfor %}</div>{% else %}<div class="empty-state dashboard-empty-state"><h3>Aún no hay movimientos</h3><p>Las entradas, salidas y ajustes quedarán registrados aquí.</p></div>{% endif %}
+  </section>
+
+  <section class="surface-panel flow-panel" aria-labelledby="flow-title">
+    <div class="surface-panel-heading"><div><h2 id="flow-title">Entradas y salidas</h2><p>Unidades por mes · últimos seis meses</p></div><a class="round-link" href="{% url 'productos:movimientos' %}" aria-label="Ver historial de movimientos" title="Ver movimientos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div>
+    {% if es_administrador %}<div class="flow-totals"><div><strong>{{ total_entradas_periodo }}</strong><span>Entradas del periodo</span></div><div><strong>{{ total_salidas_periodo }}</strong><span>Salidas del periodo</span></div></div>{% else %}<div class="flow-totals single-flow-total"><div><strong>{{ total_salidas_periodo }}</strong><span>Tus salidas en el periodo</span></div></div>{% endif %}
+    <div class="month-chart-legend">{% if es_administrador %}<span><i class="month-entry-key"></i>Entradas</span>{% endif %}<span><i class="month-exit-key"></i>{% if es_administrador %}Salidas{% else %}Tus salidas{% endif %}</span></div>
+    <div class="month-flow-chart" role="img" aria-label="{% if es_administrador %}Gráfico de barras de entradas y salidas por mes durante los últimos seis meses{% else %}Gráfico de barras de tus salidas mensuales durante los últimos seis meses{% endif %}">{% for mes in meses %}<div class="month-flow-column" title="{{ mes.nombre }}: {{ mes.entradas }} entradas y {{ mes.salidas }} salidas"><div class="month-flow-bars">{% if es_administrador %}<i class="month-flow-bar entry" style="height:{{ mes.entradas_pct }}%"></i>{% endif %}<i class="month-flow-bar exit" style="height:{{ mes.salidas_pct }}%"></i></div><span>{{ mes.nombre }}</span></div>{% endfor %}</div>
+    <ul class="sr-only" aria-label="Valores del gráfico de movimientos por mes">{% for mes in meses %}<li>{{ mes.nombre }}: {% if es_administrador %}{{ mes.entradas }} entradas y {% endif %}{{ mes.salidas }} salidas.</li>{% endfor %}</ul>
+  </section>
+</div>
+{% endblock %}

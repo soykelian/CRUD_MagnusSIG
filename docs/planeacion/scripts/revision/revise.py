@@ -17,7 +17,7 @@ def page(n,title=None,sub=None):
   c.setFillColor(navy); c.setFont('Helvetica-Bold',16); c.drawString(42,574,title)
   if sub: c.setFillColor(muted); c.setFont('Helvetica',8.5); c.drawString(42,558,sub)
   c.setStrokeColor(line); c.line(42,547,750,547)
- c.setStrokeColor(line); c.line(42,33,750,33); c.setFillColor(muted); c.setFont('Helvetica',7); c.drawString(42,20,'Sistema Web de Gestión de Inventario · Magnus SIS'); c.drawRightString(750,20,'Página '+str(n))
+ c.setStrokeColor(line); c.line(42,33,750,33); c.setFillColor(muted); c.setFont('Helvetica',7); c.drawString(42,20,'Sistema Web de Gestión de Inventario · Magnus SIG'); c.drawRightString(750,20,'Página '+str(n))
  return b,c
 def P(c,s,x,top,w,style='body'):
  q=Paragraph(s,st[style]); _,h=q.wrap(w,500); q.drawOn(c,x,top-h); return top-h
@@ -31,7 +31,7 @@ def tab(c,data,x,y,widths,heights=None):
  t.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),HexColor('#edf4fc')),('GRID',(0,0),(-1,-1),.45,line),('VALIGN',(0,0),(-1,-1),'MIDDLE'),('LEFTPADDING',(0,0),(-1,-1),7),('RIGHTPADDING',(0,0),(-1,-1),7)])); _,h=t.wrapOn(c,sum(widths),500); t.drawOn(c,x,y-h); return h
 pages={}
 # cover
-b,c=page(1); c.drawImage(ImageReader(R/'assets'/'branding'/'logo.png'),42,442,width=108,height=108,mask='auto',preserveAspectRatio=True); c.setFillColor(navy); c.setFont('Helvetica-Bold',11); c.drawString(164,532,'MAGNUS SIS'); c.setFillColor(ink); c.setFont('Helvetica-Bold',23); c.drawString(164,500,'Sistema Web de Gestión de Inventario'); c.setFillColor(muted); c.setFont('Helvetica',10); c.drawString(164,479,'Modelado lógico · prototipo visual · propuesta de esqueleto Django'); c.setStrokeColor(navy); c.setLineWidth(2); c.line(42,458,750,458); P(c,'INTEGRANTES',42,435,700,'head')
+b,c=page(1); c.drawImage(ImageReader(R/'assets'/'branding'/'logo.png'),42,442,width=108,height=108,mask='auto',preserveAspectRatio=True); c.setFillColor(navy); c.setFont('Helvetica-Bold',11); c.drawString(164,532,'MAGNUS SIG'); c.setFillColor(ink); c.setFont('Helvetica-Bold',23); c.drawString(164,500,'Sistema Web de Gestión de Inventario'); c.setFillColor(muted); c.setFont('Helvetica',10); c.drawString(164,479,'Modelado lógico · prototipo visual · propuesta de esqueleto Django'); c.setStrokeColor(navy); c.setLineWidth(2); c.line(42,458,750,458); P(c,'INTEGRANTES',42,435,700,'head')
 names=['Kevin Julian Sanchez Perez','Juan Jose Osorio Quitian','Luis Esteban Medina','Brayan Steven Sanchez','Sergio Neira','Hilver Galindo']
 for i,n in enumerate(names):
  x=55+(i%2)*350; y=394-(i//2)*35; c.setFillColor(blue); c.circle(x,y+2,3,fill=1,stroke=0); c.setFillColor(ink); c.setFont('Helvetica',10); c.drawString(x+12,y-2,n)
@@ -90,14 +90,14 @@ for fn,label,x,top,mw,mh in [('screen-4.png','Detalle',42,88,350,420),('screen-5
 note(c,'Los datos son ilustrativos. La pantalla de categorías solo representa el listado; la administración funcional queda pendiente.',42,42,708,30); pages[10]=done(b,c)
 # repo actuality and target
 b,c=page(12,'3. Estado del código y estructura','Se distingue el contenido presente en el repositorio de la app que se propone implementar.')
-P(c,'REPOSITORIO ACTUAL',42,520,330,'head'); P(c,'CRUD_MagnusSIS/<br/>├─ README.md<br/>├─ Logotipo corporativo Magnus SIS.png<br/>├─ mockups-inventario.html<br/>├─ mockups-inventario.css<br/>└─ magnus_sis/<br/>&nbsp;&nbsp; ├─ manage.py<br/>&nbsp;&nbsp; └─ magnus_sis/{settings,urls,asgi,wsgi}.py',52,488,320,'small')
+P(c,'REPOSITORIO ACTUAL',42,520,330,'head'); P(c,'CRUD_MagnusSIG/<br/>├─ README.md<br/>├─ Logotipo corporativo Magnus SIG.png<br/>├─ mockups-inventario.html<br/>├─ mockups-inventario.css<br/>└─ magnus_sig/<br/>&nbsp;&nbsp; ├─ manage.py<br/>&nbsp;&nbsp; └─ magnus_sig/{settings,urls,asgi,wsgi}.py',52,488,320,'small')
 note(c,'El proyecto tiene /admin/ y SQLite configurado. No existen todavía la app productos, modelos, migraciones, vistas, forms, templates ni rutas CRUD.',42,298,340,63,amber)
-P(c,'ESTRUCTURA OBJETIVO · PENDIENTE',420,520,330,'head'); P(c,'magnus_sis/productos/<br/>├─ models.py · Categoria y Producto<br/>├─ forms.py · validaciones<br/>├─ views.py · operaciones CRUD<br/>├─ urls.py · rutas del mockup<br/>├─ admin.py · configuración<br/>├─ migrations/<br/>└─ templates/productos/<br/>&nbsp;&nbsp; ├─ lista.html<br/>&nbsp;&nbsp; ├─ detalle.html<br/>&nbsp;&nbsp; ├─ form.html<br/>&nbsp;&nbsp; └─ confirmar_eliminar.html<br/>requirements.txt · pendiente',430,488,320,'small')
+P(c,'ESTRUCTURA OBJETIVO · PENDIENTE',420,520,330,'head'); P(c,'magnus_sig/productos/<br/>├─ models.py · Categoria y Producto<br/>├─ forms.py · validaciones<br/>├─ views.py · operaciones CRUD<br/>├─ urls.py · rutas del mockup<br/>├─ admin.py · configuración<br/>├─ migrations/<br/>└─ templates/productos/<br/>&nbsp;&nbsp; ├─ lista.html<br/>&nbsp;&nbsp; ├─ detalle.html<br/>&nbsp;&nbsp; ├─ form.html<br/>&nbsp;&nbsp; └─ confirmar_eliminar.html<br/>requirements.txt · pendiente',430,488,320,'small')
 note(c,'No se afirman `manage.py check` ni pruebas de humo aprobadas: la app y sus pruebas todavía no existen en el repositorio.',420,298,330,63,amber); P(c,'Repositorio remoto de GitHub: no se indicó una URL verificable.',42,205,708,'small'); pages[11]=done(b,c)
 # schema/config current vs future
 b,c=page(16,'3.4 Datos y configuración','Esquema relacional propuesto; SQLite es la única base configurada actualmente.')
 P(c,'MODELO DE DATOS OBJETIVO',42,520,330,'head'); P(c,'<b>Categoria</b>: id PK, nombre VARCHAR(100) obligatorio, descripcion TEXT opcional.<br/><br/><b>Producto</b>: id PK, nombre VARCHAR(150) obligatorio, descripcion TEXT opcional, categoria_id FK obligatoria, precio DECIMAL(10,2) mayor que cero, cantidad entero ≥ 0, fechas de creación y actualización.<br/><br/>Una categoría puede contener cero o muchos productos; cada producto pertenece a una categoría.',42,488,330)
-P(c,'CONFIGURACIÓN',420,520,330,'head'); P(c,'<b>Actual:</b> `magnus_sis/settings.py` usa SQLite local. No configura variables de entorno para cambiar a MySQL.<br/><br/><b>Objetivo:</b> MySQL mediante Django ORM, pendiente de instalar y configurar.<br/><br/><b>Pendiente:</b> `requirements.txt` y dependencia del conector MySQL.',420,488,330)
+P(c,'CONFIGURACIÓN',420,520,330,'head'); P(c,'<b>Actual:</b> `magnus_sig/settings.py` usa SQLite local. No configura variables de entorno para cambiar a MySQL.<br/><br/><b>Objetivo:</b> MySQL mediante Django ORM, pendiente de instalar y configurar.<br/><br/><b>Pendiente:</b> `requirements.txt` y dependencia del conector MySQL.',420,488,330)
 note(c,'Los ejemplos de `.gitignore` ampliado y `requirements.txt` del borrador original son propuestas, no archivos presentes en la raíz.',42,123,708,52,amber); pages[15]=done(b,c)
 # README summary
 b,c=page(17,'README.md · resumen alineado','Descripción de referencia que refleja el estado real del proyecto.')
@@ -105,7 +105,7 @@ P(c,'Sistema Web de Gestión de Inventario',42,520,708,'head'); P(c,'<b>Integran
 P(c,'<b>Descripción</b><br/>Propuesta académica para gestionar productos y categorías. El prototipo HTML/CSS presenta listado, búsqueda, formularios, detalle, categorías y confirmación de eliminación. El CRUD Django con persistencia queda pendiente.',42,425,708)
 P(c,'<b>Tecnologías</b><br/>Prototipo: HTML5 y CSS3. Backend objetivo: Python y Django MVT. Base actual: SQLite; destino previsto: MySQL.',42,337,708)
 P(c,'<b>Estado</b><br/>Existe el proyecto base Django y el mockup estático. La app de inventario, validaciones, migraciones, integración MySQL y pruebas no están implementadas.',42,270,708)
-note(c,'El README de la raíz sigue siendo una descripción breve; este resumen en el PDF no afirma que el README ya se haya modificado.',42,112,708,49); P(c,'Repositorio local: CRUD_MagnusSIS · URL remota no confirmada.',42,90,708,'small'); pages[16]=done(b,c)
+note(c,'El README de la raíz sigue siendo una descripción breve; este resumen en el PDF no afirma que el README ya se haya modificado.',42,112,708,49); P(c,'Repositorio: soykelian/CRUD_MagnusSIG · nombre interno Django: magnus_sig.',42,90,708,'small'); pages[16]=done(b,c)
 # Build draft pages (direct replacement), only code excerpt pages receive note overlays.
 w=PdfWriter()
 for i,old in enumerate(src.pages):
