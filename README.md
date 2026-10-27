@@ -197,23 +197,170 @@ npm run motion:build
 
 ---
 
-## Seguridad y Buenas Prácticas con Git
+## Guía de Git y GitHub para el equipo
 
-Para mantener la seguridad del proyecto y de los datos:
+Esta guía sirve para que cada integrante del equipo mantenga el proyecto actualizado en su computadora y comparta sus cambios de manera limpia y segura sin sobrescribir el trabajo de los demás.
 
-1. **Gestión de credenciales:**
-   * **NUNCA subas contraseñas, claves secretas ni tokens de API al repositorio.**
-   * Todas las credenciales deben permanecer en el archivo local `.env`.
-   * Los archivos `.env`, carpetas `venv/`, `node_modules/` y archivos locales de base de datos (`.sqlite3`) están ignorados por Git.
+* **Repositorio oficial en GitHub:** [CRUD_MagnusSIG](https://github.com/soykelian/CRUD_MagnusSIG)
+* **URL de clonación:** `https://github.com/soykelian/CRUD_MagnusSIG.git`
 
-2. **Cuentas de usuario:**
-   * Git comparte únicamente código fuente y migraciones, **no usuarios ni contraseñas**.
-   * Cada integrante crea su propio superusuario local con `createsuperuser`.
+---
 
-3. **Flujo de ramas sugerido:**
-   * Crea una rama propia para cada tarea (`feature/nombre-tarea`, `fix/correccion`).
-   * Revisa tus cambios antes de confirmar (`git status` y `git diff`).
-   * Sube tus cambios a GitHub y solicita la integración mediante un **Pull Request**.
+### 1. Primera vez: Clonar y preparar el proyecto
+
+Abre PowerShell en la carpeta donde guardas tus proyectos y ejecuta:
+
+```powershell
+git clone https://github.com/soykelian/CRUD_MagnusSIG.git
+cd .\CRUD_MagnusSIG
+```
+
+Luego sigue los pasos de la sección **Instalación y puesta en marcha** (instalar frontend, crear `venv`, copiar `.env.example` a `.env`, importar base de datos y crear tu superusuario).
+
+---
+
+### 2. Flujo diario: Traer los cambios del equipo antes de programar
+
+Siempre que vayas a comenzar a trabajar o a crear una nueva funcionalidad, asegúrate de tener la rama principal al día:
+
+```powershell
+# 1. Comprueba que no tengas cambios pendientes sin guardar
+git status
+
+# 2. Pásate a la rama principal
+git switch main
+
+# 3. Descarga las últimas actualizaciones que integró el equipo
+git pull --ff-only origin main
+```
+
+> [!WARNING]
+> Nunca uses `git reset --hard` a la ligera si tienes cambios propios sin guardar, ya que borrará tu trabajo local.
+
+---
+
+### 3. Crear una rama para tu tarea específica
+
+**Nunca trabajes ni hagas commits directamente sobre la rama `main`**. Cada integrante debe crear una rama con un nombre descriptivo para la tarea que va a desarrollar:
+
+```powershell
+git switch -c feature/nombre-de-la-tarea
+```
+
+**Ejemplos de nombres de ramas recomendados:**
+* `feature/gestion-ventas`
+* `feature/modulo-clientes`
+* `fix/calculo-stock-minimo`
+* `fix/filtro-fechas-dashboard`
+* `docs/actualizacion-manual`
+
+---
+
+### 4. Guardar tus cambios y subir tu rama a GitHub
+
+Cuando termines una parte funcional o un bloque de trabajo:
+
+```powershell
+# 1. Revisa qué archivos modificaste o creaste
+git status
+
+# 2. Comprueba las líneas exactas que cambiaste
+git diff
+
+# 3. Agrega únicamente los archivos correspondientes a tu tarea
+git add <archivo1> <archivo2>
+# O si todos pertenecen a tu tarea:
+git add .
+
+# 4. Confirma el commit con un mensaje claro y descriptivo en español
+git commit -m "Agrega validación de stock mínimo en formulario de salidas"
+
+# 5. Sube tu rama a GitHub por primera vez
+git push -u origin feature/nombre-de-la-tarea
+```
+
+En los siguientes envíos de esa misma rama, solo necesitarás escribir `git push`.
+
+---
+
+### 5. Integrar tu trabajo mediante Pull Request (PR)
+
+1. Entra al repositorio en [CRUD_MagnusSIG en GitHub](https://github.com/soykelian/CRUD_MagnusSIG).
+2. Verás una barra avisando que subiste una rama reciente. Haz clic en el botón verde **Compare & pull request**.
+3. Escribe un título conciso y explica brevemente qué hace tu cambio y cómo probarlo.
+4. Avisa a tus compañeros de equipo para que revisen el código.
+5. Una vez aprobado, se integra con **Merge pull request** hacia `main`.
+
+Cuando el Pull Request quede integrado en GitHub, regresa a tu terminal, actualiza tu `main` local y elimina la rama de la tarea terminada:
+
+```powershell
+git switch main
+git pull --ff-only origin main
+git branch -d feature/nombre-de-la-tarea
+```
+
+---
+
+### 6. Si necesitas revisar o probar una rama que subió un compañero
+
+Si un compañero subió una rama remota (por ejemplo `feature/reportes-csv`) y necesitas probarla en tu máquina:
+
+```powershell
+# 1. Actualiza la lista de ramas remotas
+git fetch origin
+
+# 2. Descarga la rama y cámbiate a ella
+git switch --track -c feature/reportes-csv origin/feature/reportes-csv
+```
+
+Para volver a tu rama principal cuando termines de revisarla:
+```powershell
+git switch main
+git pull --ff-only origin main
+```
+
+---
+
+### 7. Qué comparte Git y qué NO comparte
+
+| Elemento | ¿Se comparte en Git? | Explicación |
+| --- | :---: | --- |
+| **Código Python, HTML, CSS, JS** | ✅ Sí | Se versiona y sincroniza en el repositorio. |
+| **Migraciones de Django (`migrations/`)** | ✅ Sí | Permiten que todos tengan el mismo esquema de base de datos. |
+| **Script SQL base (`magnussig_inventario.sql`)** | ✅ Sí | Estructura y datos semilla de referencia. |
+| **Plantilla de configuración (`.env.example`)** | ✅ Sí | Modelo de variables de entorno sin secretos. |
+| **Archivo local `.env`** | ❌ **NUNCA** | Protegido en `.gitignore`. Contiene contraseñas personales. |
+| **Registros y datos de tu MySQL local** | ❌ **NO** | Cada equipo corre su base de datos localmente. |
+| **Superusuarios y contraseñas de admin** | ❌ **NO** | Cada desarrollador crea su propio admin con `createsuperuser`. |
+| **Carpetas `venv/`, `node_modules/`, `db.sqlite3`** | ❌ **NO** | Excluidas por `.gitignore`. Cada entorno las genera localmente. |
+
+---
+
+### Comandos de consulta rápida de Git
+
+```powershell
+git status                      # Ver en qué rama estás y cambios pendientes
+git branch                      # Listar ramas locales
+git fetch origin                # Consultar novedades del repositorio remoto
+git pull --ff-only origin main  # Actualizar main local de forma limpia
+git diff                        # Ver cambios línea por línea antes de agregarlos
+git log --oneline -5            # Ver el historial de los últimos 5 commits
+```
+
+---
+
+## Roles y permisos en el sistema
+
+El sistema cuenta con un control de acceso basado en grupos y roles de Django:
+
+* **Administrador (Superusuario):**
+  * Acceso total a todos los módulos: Productos, Categorías, Proveedores, Clientes, Servicios SG-SST, Entradas, Salidas, Movimientos, Reportes con exportación CSV y Configuración.
+  * Acceso al panel administrativo de Django en `/admin/`.
+* **Vendedor:**
+  * Acceso operativo enfocado: consulta de existencias en Inventario y Catálogo, registro de clientes y ejecución de despachos (Salidas permitidas).
+  * Restricción a módulos de configuración sensible, compras y panel administrativo.
+
+Para asignar un vendedor, ingresa a `/admin/` con una cuenta administradora, crea el usuario y márcalo en el grupo **Vendedor** (dejando desmarcada la opción `is_staff`).
 
 ---
 
