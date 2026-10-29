@@ -15,7 +15,7 @@ from reportlab.lib.utils import ImageReader
 
 ROOT = Path(r"C:\Users\Julian\Documents\CRUD_MagnusSIG")
 SCREEN = ROOT / "tmp" / "manual_support" / "screens"
-OUT = ROOT / "output" / "pdf" / "Manual_Usuario_Magnus_SIS.pdf"
+OUT = ROOT / "output" / "pdf" / "Manual_Usuario_Magnus_SIG.pdf"
 LOGO = ROOT / "magnus_sig" / "productos" / "static" / "branding" / "magnus-sig-horizontal.png"
 
 PAGE = landscape(A4)
