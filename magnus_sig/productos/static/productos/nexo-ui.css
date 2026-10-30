@@ -583,7 +583,7 @@ body.app-page, body.login-page { font-size: 15px; }
 .movement-type-row.adjustment .movement-type-track i { background: var(--ui-orange); }
 .movement-type-row.exit .movement-type-track i,
 .movement-type-row.return .movement-type-track i { background: var(--ui-cyan); }
-.category-count { border-radius: 999px; background: var(--ui-cyan-soft); color: var(--ui-primary); padding: 4px 8px; }
+.category-count { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; border-radius: 999px; background: var(--ui-cyan-soft); color: var(--ui-primary); padding: 4px 10px; }
 .category-guide { border-top: 3px solid var(--ui-orange); }
 .form-card, .form-help { border-top: 2px solid var(--ui-indigo-line); }
 .field input:focus, .field select:focus, .field textarea:focus, .login-form input:focus { border-color: var(--ui-cyan); box-shadow: 0 0 0 3px rgb(38 157 216 / 18%); }

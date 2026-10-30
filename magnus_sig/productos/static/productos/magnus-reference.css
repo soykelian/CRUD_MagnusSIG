@@ -1378,8 +1378,33 @@ body.app-page {
 .app-page .report-bar-track i { background: #289fd3; }
 .app-page .category-bar-track i { background: #289fd3; }
 .app-page .feature-mark,
-.app-page .stock-total,
-.app-page .category-count { background: var(--ref-purple-soft); color: var(--ref-purple); }
+.app-page .stock-total { background: var(--ref-purple-soft); color: var(--ref-purple); }
+
+.app-page .category-count,
+.category-count {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+  min-width: 96px !important;
+  padding: 4px 12px !important;
+  border-radius: 9999px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  background: var(--ref-purple-soft) !important;
+  color: var(--ref-purple) !important;
+  box-sizing: border-box !important;
+  text-align: center !important;
+  flex-shrink: 0 !important;
+}
+
+.table th.cell-count,
+.table td.cell-count {
+  white-space: nowrap !important;
+  width: 1% !important;
+  min-width: 130px !important;
+}
 .app-page .search-submit,
 .app-page form.toolbar .search .search-submit { color: var(--ref-blue-deep) !important; }
 

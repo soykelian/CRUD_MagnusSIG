@@ -143,6 +143,13 @@ class ProductoForm(forms.ModelForm):
 
 
 class CategoriaForm(forms.ModelForm):
+    estado = forms.ChoiceField(
+        choices=[('activo', 'Activo'), ('inactivo', 'Inactivo')],
+        initial='activo',
+        required=False,
+        label='Estado',
+    )
+
     class Meta:
         model = Categoria
         fields = ['nombre', 'descripcion', 'estado']
@@ -154,6 +161,9 @@ class CategoriaForm(forms.ModelForm):
         widgets = {
             'descripcion': forms.Textarea(attrs={'rows': 3}),
         }
+
+    def clean_estado(self) -> str:
+        return self.cleaned_data.get('estado') or 'activo'
 
     def clean_nombre(self) -> str:
         nombre = self.cleaned_data['nombre'].strip()
