@@ -981,92 +981,368 @@ def crear_servicio(request: HttpRequest) -> HttpResponse:
 
 # ---------------------------- Reportes & Configuración ----------------------------
 
+def _respuesta_reporte_pdf(datos):
+    from io import BytesIO
+    from xml.sax.saxutils import escape
+
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_LEFT
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+    buffer = BytesIO()
+    documento = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        rightMargin=14 * mm,
+        leftMargin=14 * mm,
+        topMargin=14 * mm,
+        bottomMargin=14 * mm,
+        title="Reporte de inventario Magnus SIG",
+        author="Magnus SIG",
+    )
+    estilos = getSampleStyleSheet()
+    estilos.add(ParagraphStyle(
+        name="CeldaReporte",
+        parent=estilos["BodyText"],
+        fontName="Helvetica",
+        fontSize=8,
+        leading=10,
+        alignment=TA_LEFT,
+    ))
+    estilos.add(ParagraphStyle(
+        name="EncabezadoReporte",
+        parent=estilos["BodyText"],
+        fontName="Helvetica-Bold",
+        fontSize=8,
+        leading=10,
+        textColor=colors.white,
+    ))
+
+    def tabla(encabezados, filas, anchos=None):
+        contenido = [[
+            Paragraph(escape(str(valor)), estilos["EncabezadoReporte"])
+            for valor in encabezados
+        ]]
+        contenido.extend([
+            [Paragraph(escape(str(valor)), estilos["CeldaReporte"]) for valor in fila]
+            for fila in filas
+        ])
+        tabla_pdf = Table(contenido, colWidths=anchos, repeatRows=1, hAlign="LEFT")
+        estilos_tabla = [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#243B64")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#D7DFEA")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]
+        if filas:
+            estilos_tabla.append(("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F2F5F9")]))
+        tabla_pdf.setStyle(TableStyle(estilos_tabla))
+        return tabla_pdf
+
+    historia = [
+        Paragraph("Reporte de inventario", estilos["Title"]),
+        Paragraph(f"Magnus SIG · Generado: {escape(datos['generado'])}", estilos["BodyText"]),
+        Spacer(1, 7 * mm),
+        Paragraph("Resumen general", estilos["Heading2"]),
+        tabla(["Indicador", "Valor"], datos["indicadores"], [100 * mm, 150 * mm]),
+        Spacer(1, 6 * mm),
+        Paragraph("Valor estimado por categoría (COP)", estilos["Heading2"]),
+        tabla(["Categoría", "Unidades", "Valor estimado (COP)"], datos["categorias"], [125 * mm, 45 * mm, 80 * mm]),
+        Spacer(1, 6 * mm),
+        Paragraph("Movimientos recientes (últimos 10)", estilos["Heading2"]),
+        tabla(
+            ["Fecha", "Código", "Producto", "Tipo", "Cantidad", "Responsable", "Referencia"],
+            datos["movimientos"],
+            [44 * mm, 28 * mm, 58 * mm, 32 * mm, 24 * mm, 40 * mm, 30 * mm],
+        ),
+    ]
+    documento.build(historia)
+    buffer.seek(0)
+    respuesta = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    respuesta["Content-Disposition"] = 'attachment; filename="reporte-inventario-magnus-sig.pdf"'
+    return respuesta
+
+
+def _respuesta_reporte_excel(datos):
+    from io import BytesIO
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    libro = Workbook()
+    resumen = libro.active
+    resumen.title = "Resumen"
+    resumen.append(["Reporte de inventario · Magnus SIG"])
+    resumen.append(["Generado", datos["generado"]])
+    resumen.append([])
+    resumen.append(["Indicador", "Valor"])
+    for fila in datos["indicadores"]:
+        resumen.append(fila)
+
+    categorias = libro.create_sheet("Categorías")
+    categorias.append(["Categoría", "Unidades", "Valor estimado (COP)"])
+    for fila in datos["categorias"]:
+        categorias.append(fila)
+
+    movimientos = libro.create_sheet("Movimientos recientes")
+    movimientos.append(["Fecha", "Código", "Producto", "Tipo", "Cantidad", "Responsable", "Referencia"])
+    for fila in datos["movimientos_excel"]:
+        movimientos.append(fila)
+
+    encabezado = PatternFill("solid", fgColor="243B64")
+    blanco_negrita = Font(color="FFFFFF", bold=True)
+    for hoja in libro.worksheets:
+        hoja.freeze_panes = "A2" if hoja.title != "Resumen" else "A5"
+        for celda in (hoja[4] if hoja.title == "Resumen" else hoja[1]):
+            celda.fill = encabezado
+            celda.font = blanco_negrita
+            celda.alignment = Alignment(vertical="center")
+        if hoja.title == "Resumen" and hoja.max_row > 4:
+            hoja.auto_filter.ref = f"A4:B{hoja.max_row}"
+        elif hoja.title != "Resumen" and hoja.max_row > 1:
+            hoja.auto_filter.ref = hoja.dimensions
+        for columna in hoja.columns:
+            ancho = min(
+                max(len(str(celda.value or "")) for celda in columna) + 2,
+                42,
+            )
+            hoja.column_dimensions[get_column_letter(columna[0].column)].width = max(ancho, 12)
+
+    resumen["B7"].number_format = '"$"#,##0.00'
+    for fila in categorias.iter_rows(min_row=2, min_col=3, max_col=3):
+        fila[0].number_format = '"$"#,##0.00'
+    buffer = BytesIO()
+    libro.save(buffer)
+    respuesta = HttpResponse(
+        buffer.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    respuesta["Content-Disposition"] = 'attachment; filename="reporte-inventario-magnus-sig.xlsx"'
+    return respuesta
+
+
+def _respuesta_reporte_word(datos):
+    from io import BytesIO
+
+    from docx import Document
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Inches, Pt, RGBColor
+
+    documento = Document()
+    seccion = documento.sections[0]
+    seccion.top_margin = Inches(0.65)
+    seccion.bottom_margin = Inches(0.65)
+    seccion.left_margin = Inches(0.7)
+    seccion.right_margin = Inches(0.7)
+
+    titulo = documento.add_heading("Reporte de inventario", level=0)
+    titulo.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    subtitulo = documento.add_paragraph(f"Magnus SIG · Generado: {datos['generado']}")
+    subtitulo.style = "Subtitle"
+
+    def tabla(titulos, filas):
+        tabla_doc = documento.add_table(rows=1, cols=len(titulos))
+        tabla_doc.style = "Table Grid"
+        tabla_doc.alignment = WD_TABLE_ALIGNMENT.CENTER
+        for celda, texto in zip(tabla_doc.rows[0].cells, titulos):
+            celda.text = str(texto)
+            for run in celda.paragraphs[0].runs:
+                run.bold = True
+                run.font.color.rgb = RGBColor(255, 255, 255)
+                run.font.size = Pt(9)
+            from docx.oxml import OxmlElement
+            from docx.oxml.ns import qn
+            sombreado = OxmlElement("w:shd")
+            sombreado.set(qn("w:fill"), "243B64")
+            celda._tc.get_or_add_tcPr().append(sombreado)
+        for fila in filas:
+            celdas = tabla_doc.add_row().cells
+            for celda, valor in zip(celdas, fila):
+                celda.text = str(valor)
+                for parrafo in celda.paragraphs:
+                    for run in parrafo.runs:
+                        run.font.size = Pt(8)
+        documento.add_paragraph()
+
+    documento.add_heading("Resumen general", level=1)
+    tabla(["Indicador", "Valor"], datos["indicadores"])
+    documento.add_heading("Valor estimado por categoría (COP)", level=1)
+    tabla(["Categoría", "Unidades", "Valor estimado (COP)"], datos["categorias"])
+    documento.add_heading("Movimientos recientes (últimos 10)", level=1)
+    tabla(
+        ["Fecha", "Código", "Producto", "Tipo", "Cantidad", "Responsable", "Referencia"],
+        datos["movimientos"],
+    )
+
+    buffer = BytesIO()
+    documento.save(buffer)
+    respuesta = HttpResponse(
+        buffer.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+    respuesta["Content-Disposition"] = 'attachment; filename="reporte-inventario-magnus-sig.docx"'
+    return respuesta
+
+
+def _exportar_reporte(request, contexto, formato):
+    categorias = list(contexto["categorias"])
+    movimientos = list(contexto["movimientos_recientes"])
+    generado = timezone.localtime().strftime("%d/%m/%Y %H:%M")
+
+    indicadores = [
+        ["Productos registrados", contexto["total_productos"]],
+        ["Unidades disponibles", contexto["total_unidades"]],
+        ["Valor estimado del inventario (COP)", contexto["valor_inventario"]],
+        ["Movimientos registrados", contexto["total_movimientos"]],
+        ["Disponibles", contexto["total_disponibles"]],
+        ["Stock bajo", contexto["total_stock_bajo"]],
+        ["Agotados", contexto["total_agotados"]],
+    ]
+    filas_categorias = [
+        [categoria.nombre, int(categoria.unidades or 0), float(categoria.valor or 0)]
+        for categoria in categorias
+    ]
+    filas_movimientos = []
+    filas_movimientos_excel = []
+    for movimiento in movimientos:
+        fecha = timezone.localtime(movimiento.fecha_movimiento)
+        fecha_texto = fecha.strftime("%d/%m/%Y %H:%M")
+        responsable = movimiento.id_usuario.username if movimiento.id_usuario else "—"
+        tipo = movimiento.get_tipo_movimiento_display()
+        cantidad = movimiento.cantidad
+        filas_movimientos.append([
+            fecha_texto,
+            movimiento.id_producto.codigo,
+            movimiento.id_producto.nombre,
+            tipo,
+            cantidad,
+            responsable,
+            movimiento.referencia,
+        ])
+        filas_movimientos_excel.append([
+            fecha.replace(tzinfo=None),
+            movimiento.id_producto.codigo,
+            movimiento.id_producto.nombre,
+            tipo,
+            float(cantidad),
+            responsable,
+            movimiento.referencia,
+        ])
+
+    datos = {
+        "generado": generado,
+        "indicadores": indicadores,
+        "categorias": filas_categorias,
+        "movimientos": filas_movimientos,
+        "movimientos_excel": filas_movimientos_excel,
+    }
+    exportadores = {
+        "pdf": _respuesta_reporte_pdf,
+        "excel": _respuesta_reporte_excel,
+        "word": _respuesta_reporte_word,
+    }
+    return exportadores[formato](datos)
+
+
 @requiere_administrador
 def reportes(request: HttpRequest) -> HttpResponse:
     stock_minimo = obtener_stock_minimo()
     total_productos = Producto.objects.count()
     resumen = Inventario.objects.aggregate(
-        total_unidades=Sum('cantidad_actual'),
+        total_unidades=Sum("cantidad_actual"),
         valor=Sum(
             ExpressionWrapper(
-                F('cantidad_actual') * F('id_producto__precio_venta'),
+                F("cantidad_actual") * F("id_producto__precio_venta"),
                 output_field=DecimalField(max_digits=16, decimal_places=2),
             )
         ),
     )
-    total_unidades = int(resumen['total_unidades'] or 0)
-    valor_inventario = resumen['valor'] or Decimal('0.00')
+    total_unidades = int(resumen["total_unidades"] or 0)
+    valor_inventario = resumen["valor"] or Decimal("0.00")
 
     categorias = Categoria.objects.annotate(
-        unidades=Sum('productos__inventario_rel__cantidad_actual'),
+        unidades=Sum("productos__inventario_rel__cantidad_actual"),
         valor=Sum(
             ExpressionWrapper(
-                F('productos__inventario_rel__cantidad_actual') * F('productos__precio_venta'),
+                F("productos__inventario_rel__cantidad_actual") * F("productos__precio_venta"),
                 output_field=DecimalField(max_digits=16, decimal_places=2),
             )
         ),
-    ).order_by('-valor', 'nombre')
+    ).order_by("-valor", "nombre")
 
-    if request.GET.get('export') == 'productos':
-        productos = Producto.objects.select_related('id_categoria', 'inventario_rel').order_by('nombre')
-        return exportar_csv(
-            'inventario-productos.csv',
-            ['Código', 'Producto', 'Categoría', 'Precio Venta COP', 'Existencias', 'Estado'],
-            (
-                [
-                    p.codigo,
-                    p.nombre,
-                    p.id_categoria.nombre,
-                    p.precio_venta,
-                    p.cantidad,
-                    p.estado_etiqueta,
-                ]
-                for p in productos
-            ),
-        )
-    if request.GET.get('export') == 'movimientos':
-        movimientos_db = MovimientoInventario.objects.select_related('id_producto', 'id_usuario').order_by('-fecha_movimiento')
-        return exportar_csv(
-            'historial-movimientos.csv',
-            ['Fecha', 'Código', 'Producto', 'Tipo', 'Cantidad', 'Responsable', 'Motivo'],
-            (
-                [
-                    m.fecha_movimiento,
-                    m.id_producto.codigo,
-                    m.id_producto.nombre,
-                    m.get_tipo_movimiento_display(),
-                    m.cantidad,
-                    m.id_usuario.username if m.id_usuario else '—',
-                    m.motivo,
-                ]
-                for m in movimientos_db
-            ),
-        )
+    exportaciones_csv = {
+        "productos": (
+            "inventario-productos.csv",
+            ["Código", "Producto", "Categoría", "Precio Venta COP", "Existencias", "Estado"],
+            Producto.objects.select_related("id_categoria", "inventario_rel").order_by("nombre"),
+            lambda p: [
+                p.codigo,
+                p.nombre,
+                p.id_categoria.nombre,
+                p.precio_venta,
+                p.cantidad,
+                p.estado_etiqueta,
+            ],
+        ),
+        "movimientos": (
+            "historial-movimientos.csv",
+            ["Fecha", "Código", "Producto", "Tipo", "Cantidad", "Responsable", "Motivo"],
+            MovimientoInventario.objects.select_related(
+                "id_producto", "id_usuario"
+            ).order_by("-fecha_movimiento"),
+            lambda m: [
+                m.fecha_movimiento,
+                m.id_producto.codigo,
+                m.id_producto.nombre,
+                m.get_tipo_movimiento_display(),
+                m.cantidad,
+                m.id_usuario.username if m.id_usuario else "—",
+                m.motivo,
+            ],
+        ),
+    }
+    exportacion = request.GET.get("export")
+    if exportacion in exportaciones_csv:
+        nombre, encabezados, registros, convertir = exportaciones_csv[exportacion]
+        return exportar_csv(nombre, encabezados, (convertir(registro) for registro in registros))
 
     contexto = {
-        'total_productos': total_productos,
-        'total_unidades': total_unidades,
-        'valor_inventario': valor_inventario,
-        'total_categorias': Categoria.objects.count(),
-        'total_agotados': Inventario.objects.filter(cantidad_actual__lte=0).count(),
-        'total_stock_bajo': Inventario.objects.filter(
-            cantidad_actual__gt=0, cantidad_actual__lte=F('id_producto__stock_minimo')
+        "total_productos": total_productos,
+        "total_unidades": total_unidades,
+        "valor_inventario": valor_inventario,
+        "total_categorias": Categoria.objects.count(),
+        "total_agotados": Inventario.objects.filter(cantidad_actual__lte=0).count(),
+        "total_stock_bajo": Inventario.objects.filter(
+            cantidad_actual__gt=0, cantidad_actual__lte=F("id_producto__stock_minimo")
         ).count(),
-        'total_disponibles': Inventario.objects.filter(
-            cantidad_actual__gt=F('id_producto__stock_minimo')
+        "total_disponibles": Inventario.objects.filter(
+            cantidad_actual__gt=F("id_producto__stock_minimo")
         ).count(),
-        'total_movimientos': MovimientoInventario.objects.count(),
-        'entradas': Compra.objects.count(),
-        'salidas': Venta.objects.count(),
-        'servicios_count': Servicio.objects.count(),
-        'movimientos_recientes': MovimientoInventario.objects.select_related('id_producto', 'id_usuario')[:10],
-        'categorias': categorias,
-        'chart_data': [
-            {'nombre': c.nombre, 'valor': float(c.valor or 0)}
+        "total_movimientos": MovimientoInventario.objects.count(),
+        "entradas": Compra.objects.count(),
+        "salidas": Venta.objects.count(),
+        "servicios_count": Servicio.objects.count(),
+        "movimientos_recientes": MovimientoInventario.objects.select_related(
+            "id_producto", "id_usuario"
+        )[:10],
+        "categorias": categorias,
+        "chart_data": [
+            {"nombre": c.nombre, "valor": float(c.valor or 0)}
             for c in categorias
         ],
     }
-    return render(request, 'productos/reportes.html', contexto)
+    if exportacion in {"pdf", "excel", "word"}:
+        return _exportar_reporte(request, contexto, exportacion)
+    return render(request, "productos/reportes.html", contexto)
 
 
 @requiere_administrador

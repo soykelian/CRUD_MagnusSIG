@@ -66,6 +66,8 @@ El sistema se acopla a la base de datos relacional `magnussig_inventario` compue
 | **Animación y UX** | GSAP, AOS y Lenis | Transiciones fluidas, animaciones al scroll y microinteracciones visuales. |
 | **Herramientas de build** | Node.js, npm y esbuild | Compilación de Tailwind CSS y empaquetado de librerías frontend. |
 
+El detalle de dependencias asignadas a módulos y formularios está en [docs/dependencias.md](docs/dependencias.md).
+
 ---
 
 ## Arquitectura y organización
@@ -186,15 +188,29 @@ Para detener el servidor, presiona `Ctrl + C` en la terminal.
 
 ### 4. Actualizaciones posteriores (después de traer cambios de Git)
 
-Cuando hagas `git pull` de la rama del equipo:
+Después de ejecutar `git pull`, aplica las migraciones antes de iniciar el servidor. Las migraciones sincronizan estructura y catálogos; no vuelvas a importar `magnussig_inventario.sql` sobre una base existente, porque es un volcado inicial y contiene instrucciones que pueden eliminar tablas.
+
 ```powershell
+git pull --ff-only origin main
+.\venv\Scripts\python.exe .\magnus_sig\manage.py migrate
 npm install
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
-.\venv\Scripts\python.exe .\magnus_sig\manage.py migrate
 npm run css:build
 npm run motion:build
 ```
 
+La migración `productos.0002` añade los tipos de servicio compartidos por su nombre. Los registros que ya existan conservan su ID, descripción, estado y demás datos; no se eliminan ni se modifican servicios contratados, clientes o usuarios. Comprueba el catálogo en el formulario de servicios o en Django Admin.
+
+#### Agregar tipos de servicio al catálogo
+
+Cuando se apruebe un nuevo tipo compartido:
+
+1. Añade el nombre y sus valores iniciales a una nueva migración de datos en `magnus_sig/productos/migrations/`; no edites una migración ya publicada.
+2. Usa `apps.get_model('productos', 'TipoServicio')` y `get_or_create(nombre=..., defaults={...})`, con la migración anterior en `dependencies`.
+3. No borres ni actualices filas existentes desde el seed. Si cambia la información de un tipo, prepara una migración específica y conserva los valores locales conforme a la regla acordada por el equipo.
+4. Revisa y prueba la migración antes de subirla a GitHub.
+
+Los demás integrantes solo necesitan traer el cambio y ejecutar `python manage.py migrate` (en este repositorio: `.\venv\Scripts\python.exe .\magnus_sig\manage.py migrate`). La operación usa el nombre único del modelo, por lo que volver a ejecutar la función no crea duplicados.
 ---
 
 ## Guía de Git y GitHub para el equipo

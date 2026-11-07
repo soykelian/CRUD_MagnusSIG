@@ -1,3 +1,11 @@
+# Framework y módulos Django (modelos, formularios, vistas, admin, roles, migraciones)
 Django>=6.1,<6.2
+
+# Conector del backend MySQL y soporte de autenticación del servidor
 pymysql>=1.1.0
 cryptography>=42.0.0
+
+# Exportación del módulo Reportes
+openpyxl>=3.1.5
+reportlab>=4.2
+python-docx>=1.1.2

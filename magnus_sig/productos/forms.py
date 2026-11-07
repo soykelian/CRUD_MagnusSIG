@@ -18,7 +18,16 @@ from .models import (
     Proveedor,
     Servicio,
     TipoServicio,
+    Usuario,
     Venta,
+)
+
+from .validators import (
+    validar_ciudad,
+    validar_direccion,
+    validar_documento_cliente,
+    validar_nit,
+    validar_telefono_colombiano,
 )
 
 
@@ -177,7 +186,46 @@ class CategoriaForm(forms.ModelForm):
         return nombre
 
 
-class ProveedorForm(forms.ModelForm):
+class ContactoValidationMixin:
+    def clean_telefono(self):
+        telefono = (self.cleaned_data.get("telefono") or "").strip()
+        validar_telefono_colombiano(telefono)
+        return telefono or None
+
+    def clean_direccion(self):
+        return validar_direccion(self.cleaned_data.get("direccion") or "")
+
+    def clean_ciudad(self):
+        return validar_ciudad(self.cleaned_data.get("ciudad") or "")
+
+
+class ProveedorForm(ContactoValidationMixin, forms.ModelForm):
+    telefono = forms.CharField(
+        label="Teléfono de contacto",
+        required=True,
+        max_length=30,
+        widget=forms.TextInput(attrs={"type": "tel", "autocomplete": "tel"}),
+        help_text="Colombia: 10 dígitos. Se acepta +57 o formato internacional.",
+    )
+    correo = forms.EmailField(
+        label="Correo electrónico",
+        required=True,
+        max_length=254,
+        widget=forms.EmailInput(attrs={"autocomplete": "email"}),
+    )
+    direccion = forms.CharField(
+        label="Dirección",
+        required=True,
+        max_length=255,
+        widget=forms.TextInput(attrs={"autocomplete": "street-address"}),
+        help_text="Mínimo 5 caracteres; se permiten nomenclaturas como Calle 10 # 20-30.",
+    )
+    ciudad = forms.CharField(
+        label="Ciudad",
+        required=True,
+        max_length=100,
+        widget=forms.TextInput(attrs={"autocomplete": "address-level2"}),
+    )
     class Meta:
         model = Proveedor
         fields = [
@@ -202,7 +250,7 @@ class ProveedorForm(forms.ModelForm):
         }
 
     def clean_nit(self):
-        nit = self.cleaned_data['nit'].strip()
+        nit = validar_nit(self.cleaned_data["nit"])
         existentes = Proveedor.objects.filter(nit__iexact=nit)
         if self.instance.pk:
             existentes = existentes.exclude(pk=self.instance.pk)
@@ -217,7 +265,33 @@ class ProveedorForm(forms.ModelForm):
         return razon
 
 
-class ClienteForm(forms.ModelForm):
+class ClienteForm(ContactoValidationMixin, forms.ModelForm):
+    telefono = forms.CharField(
+        label="Teléfono",
+        required=True,
+        max_length=30,
+        widget=forms.TextInput(attrs={"type": "tel", "autocomplete": "tel"}),
+        help_text="Colombia: 10 dígitos. Se acepta +57 o formato internacional.",
+    )
+    correo = forms.EmailField(
+        label="Correo electrónico",
+        required=True,
+        max_length=254,
+        widget=forms.EmailInput(attrs={"autocomplete": "email"}),
+    )
+    direccion = forms.CharField(
+        label="Dirección",
+        required=True,
+        max_length=255,
+        widget=forms.TextInput(attrs={"autocomplete": "street-address"}),
+        help_text="Mínimo 5 caracteres; se permiten nomenclaturas como Calle 10 # 20-30.",
+    )
+    ciudad = forms.CharField(
+        label="Ciudad",
+        required=True,
+        max_length=100,
+        widget=forms.TextInput(attrs={"autocomplete": "address-level2"}),
+    )
     class Meta:
         model = Cliente
         fields = [
@@ -244,7 +318,11 @@ class ClienteForm(forms.ModelForm):
         }
 
     def clean_numero_documento(self):
-        doc = self.cleaned_data['numero_documento'].strip()
+        tipo = self.cleaned_data.get("tipo_documento")
+        doc = validar_documento_cliente(
+            tipo,
+            self.cleaned_data["numero_documento"],
+        )
         existentes = Cliente.objects.filter(numero_documento__iexact=doc)
         if self.instance.pk:
             existentes = existentes.exclude(pk=self.instance.pk)
@@ -271,12 +349,14 @@ class EntradaForm(forms.Form):
     cantidad = forms.DecimalField(
         label='Cantidad a ingresar',
         min_value=Decimal('0.001'),
+        max_digits=12,
         decimal_places=3,
         initial=1,
     )
     costo_unitario = forms.DecimalField(
         label='Costo unitario de compra (COP)',
         min_value=Decimal('0.01'),
+        max_digits=12,
         decimal_places=2,
     )
     numero_factura = forms.CharField(
@@ -315,12 +395,14 @@ class SalidaForm(forms.Form):
     cantidad = forms.DecimalField(
         label='Cantidad a despachar',
         min_value=Decimal('0.001'),
+        max_digits=12,
         decimal_places=3,
         initial=1,
     )
     precio_unitario = forms.DecimalField(
         label='Precio de venta unitario (COP)',
         min_value=Decimal('0.01'),
+        max_digits=12,
         decimal_places=2,
         required=False,
     )
@@ -354,6 +436,7 @@ class MovimientoForm(forms.Form):
     )
     cantidad = forms.DecimalField(
         label='Cantidad',
+        max_digits=12,
         decimal_places=3,
     )
     motivo = forms.CharField(
@@ -374,6 +457,12 @@ class MovimientoForm(forms.Form):
 
 
 class ServicioForm(forms.ModelForm):
+    valor = forms.DecimalField(
+        label="Valor del servicio (COP)",
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.00"),
+    )
     class Meta:
         model = Servicio
         fields = [
@@ -405,6 +494,17 @@ class ServicioForm(forms.ModelForm):
         self.fields['id_cliente'].queryset = Cliente.objects.filter(estado='activo').order_by('razon_social')
         self.fields['id_tipo_servicio'].queryset = TipoServicio.objects.filter(estado='activo').order_by('nombre')
 
+    def clean(self):
+        datos = super().clean()
+        inicio = datos.get("fecha_inicio")
+        finalizacion = datos.get("fecha_finalizacion")
+        if inicio and finalizacion and finalizacion < inicio:
+            self.add_error(
+                "fecha_finalizacion",
+                "La fecha de finalización no puede ser anterior a la fecha de inicio.",
+            )
+        return datos
+
 
 class ConfiguracionForm(forms.ModelForm):
     class Meta:
@@ -415,3 +515,32 @@ class ConfiguracionForm(forms.ModelForm):
             'stock_minimo': 'Umbral general de stock bajo',
             'alertas_stock_bajo': 'Activar alertas visuales de stock bajo',
         }
+
+
+class UsuarioForm(ContactoValidationMixin, forms.ModelForm):
+    correo = forms.EmailField(
+        label="Correo electrónico",
+        required=True,
+        max_length=254,
+        widget=forms.EmailInput(attrs={"autocomplete": "email"}),
+    )
+    telefono = forms.CharField(
+        label="Teléfono",
+        required=False,
+        max_length=30,
+        widget=forms.TextInput(attrs={"type": "tel", "autocomplete": "tel"}),
+        help_text="Colombia: 10 dígitos. Se acepta +57 o formato internacional.",
+    )
+
+    class Meta:
+        model = Usuario
+        fields = [
+            "username",
+            "password_hash",
+            "nombre",
+            "apellido",
+            "correo",
+            "telefono",
+            "rol",
+            "estado",
+        ]
