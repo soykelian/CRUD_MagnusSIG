@@ -9,6 +9,7 @@ from django.db.utils import OperationalError, ProgrammingError
 from django.utils import timezone
 
 STOCK_BAJO = 5
+PORCENTAJE_MAXIMO = 100
 
 
 class Categoria(models.Model):
@@ -29,6 +30,7 @@ class Categoria(models.Model):
         ordering = ['nombre']
 
     def __str__(self) -> str:
+        """Devuelve una representación legible del registro."""
         return self.nombre
 
     def crear(self) -> None:
@@ -71,6 +73,7 @@ class Proveedor(models.Model):
         ordering = ['razon_social']
 
     def __str__(self):
+        """Devuelve una representación legible del registro."""
         return self.razon_social
 
     # Compatibilidad con vistas previas
@@ -148,6 +151,7 @@ class Cliente(models.Model):
         ordering = ['razon_social']
 
     def __str__(self):
+        """Devuelve una representación legible del registro."""
         return self.razon_social
 
     @property
@@ -207,6 +211,7 @@ class Usuario(models.Model):
         ordering = ['nombre', 'apellido']
 
     def __str__(self):
+        """Devuelve una representación legible del registro."""
         return f'{self.nombre} {self.apellido} ({self.username})'
 
 
@@ -259,7 +264,7 @@ class Producto(models.Model):
     precio_venta = models.DecimalField(
         max_digits=12, decimal_places=2, default=Decimal('0.00'))
     stock_minimo = models.DecimalField(
-        max_digits=12, decimal_places=3, default=Decimal('5.000'))
+        max_digits=12, decimal_places=3, default=Decimal(STOCK_BAJO))
     estado = models.CharField(
         max_length=10,
         choices=[('activo', 'Activo'), ('inactivo', 'Inactivo')],
@@ -274,6 +279,7 @@ class Producto(models.Model):
         ordering = ['-fecha_creacion', '-id_producto']
 
     def __str__(self) -> str:
+        """Devuelve una representación legible del registro."""
         return f'{self.codigo} - {self.nombre}' if self.codigo else self.nombre
 
     # Compatibilidad con relaciones anteriores
@@ -358,7 +364,8 @@ class Producto(models.Model):
             self.stock_minimo) if self.stock_minimo else obtener_stock_minimo()
         if cant <= 0:
             return 0
-        return min(100, round(cant * 100 / (minimo + 1)))
+        porcentaje = round(cant * PORCENTAJE_MAXIMO / (minimo + 1))
+        return min(PORCENTAJE_MAXIMO, porcentaje)
 
     def crear(self) -> None:
         """Guarda en la base de datos los cambios del registro."""
@@ -413,6 +420,7 @@ class Inventario(models.Model):
         db_table = 'inventario'
 
     def __str__(self):
+        """Devuelve una representación legible del registro."""
         return f'{self.id_producto.nombre}: {self.cantidad_actual}'
 
 
@@ -450,6 +458,7 @@ class Compra(models.Model):
         ordering = ['-fecha_compra', '-id_compra']
 
     def __str__(self):
+        """Devuelve una representación legible del registro."""
         return self.referencia
 
     @property
@@ -560,6 +569,7 @@ class Venta(models.Model):
         ordering = ['-fecha_venta', '-id_venta']
 
     def __str__(self):
+        """Devuelve una representación legible del registro."""
         return self.referencia
 
     @property
@@ -662,6 +672,7 @@ class MovimientoInventario(models.Model):
         ordering = ['-fecha_movimiento', '-id_movimiento']
 
     def __str__(self):
+        """Devuelve una representación legible del registro."""
         return f'{self.tipo_movimiento.title()} · {self.id_producto.nombre} · {self.cantidad}'
 
     @property
@@ -708,6 +719,7 @@ class TipoServicio(models.Model):
         ordering = ['nombre']
 
     def __str__(self):
+        """Devuelve una representación legible del registro."""
         return self.nombre
 
 
@@ -747,6 +759,7 @@ class Servicio(models.Model):
         ordering = ['-fecha_solicitud', '-id_servicio']
 
     def __str__(self):
+        """Devuelve una representación legible del registro."""
         return f'{self.id_tipo_servicio.nombre} - {self.id_cliente.razon_social}'
 
     @property
@@ -784,6 +797,7 @@ class ConfiguracionInventario(models.Model):
         db_table = 'configuracion_inventario'
 
     def __str__(self):
+        """Devuelve una representación legible del registro."""
         return self.nombre_organizacion
 
     def save(self, *args, **kwargs):

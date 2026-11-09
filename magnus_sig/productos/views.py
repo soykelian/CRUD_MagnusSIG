@@ -66,6 +66,11 @@ DASHBOARD_PORCENTAJE_TOTAL = 100
 DASHBOARD_DONUT_CIRCUNFERENCIA = 276.46
 DASHBOARD_ESCALA_VERTICAL = 160
 DASHBOARD_GRAFICO_ALTO = 130
+DASHBOARD_MESES_POR_ANIO = 12
+DASHBOARD_ETIQUETAS_EJE = 5
+DASHBOARD_DECIMALES_GRAFICO = 2
+DASHBOARD_EJE_X_INICIO = 55
+DASHBOARD_EJE_X_ANCHO = 835
 
 
 def exportar_csv(nombre: str, encabezados: list[str], filas) -> HttpResponse:
@@ -123,8 +128,13 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         periodo = '30d'
 
     if periodo == '1a':
-        numero_mes_inicio = hoy.year * 12 + hoy.month - 1 - 11
-        anio_inicio, mes_inicio = divmod(numero_mes_inicio, 12)
+        numero_mes_inicio = (
+            hoy.year * DASHBOARD_MESES_POR_ANIO
+            + hoy.month - 1 - (DASHBOARD_MESES_POR_ANIO - 1)
+        )
+        anio_inicio, mes_inicio = divmod(
+            numero_mes_inicio, DASHBOARD_MESES_POR_ANIO
+        )
         fecha_inicio = date(anio_inicio, mes_inicio + 1, 1)
     else:
         fecha_inicio = hoy - timedelta(days=periodos[periodo] - 1)
@@ -162,10 +172,12 @@ def dashboard(request: HttpRequest) -> HttpResponse:
     )
     intervalos = []
     if periodo == '1a':
-        numero_mes_actual = hoy.year * 12 + hoy.month - 1
-        for indice in range(12):
-            numero_mes = numero_mes_actual - 11 + indice
-            anio, mes_cero = divmod(numero_mes, 12)
+        numero_mes_actual = hoy.year * DASHBOARD_MESES_POR_ANIO + hoy.month - 1
+        for indice in range(DASHBOARD_MESES_POR_ANIO):
+            numero_mes = (
+                numero_mes_actual - (DASHBOARD_MESES_POR_ANIO - 1) + indice
+            )
+            anio, mes_cero = divmod(numero_mes, DASHBOARD_MESES_POR_ANIO)
             mes = mes_cero + 1
             inicio_mes = date(anio, mes, 1)
             fin_mes = min(date(anio, mes, monthrange(anio, mes)[1]), hoy)
@@ -219,9 +231,18 @@ def dashboard(request: HttpRequest) -> HttpResponse:
     for indice, intervalo in enumerate(intervalos):
         punto = dict(intervalo)
         if periodo == '1a':
-            punto['x'] = round(55 + (indice + 0.5) * 835 / len(intervalos))
+            # Los puntos anuales quedan centrados en cada intervalo mensual.
+            punto['x'] = round(
+                DASHBOARD_EJE_X_INICIO
+                + (indice + 0.5) * DASHBOARD_EJE_X_ANCHO / len(intervalos)
+            )
         else:
-            punto['x'] = round(55 + indice * 835 / max(1, len(intervalos) - 1))
+            # Para periodos cortos, los puntos ocupan todo el ancho del eje.
+            punto['x'] = round(
+                DASHBOARD_EJE_X_INICIO
+                + indice * DASHBOARD_EJE_X_ANCHO
+                / max(1, len(intervalos) - 1)
+            )
         punto['y_entradas'] = round(
             DASHBOARD_ESCALA_VERTICAL
             - intervalo['entradas'] * DASHBOARD_GRAFICO_ALTO / escala_grafico
@@ -234,7 +255,13 @@ def dashboard(request: HttpRequest) -> HttpResponse:
 
     indices_etiqueta = (
         range(len(datos_linea)) if periodo == '1a'
-        else sorted({round(indice * (len(datos_linea) - 1) / 4) for indice in range(5)})
+        else sorted({
+            round(
+                indice * (len(datos_linea) - 1)
+                / (DASHBOARD_ETIQUETAS_EJE - 1)
+            )
+            for indice in range(DASHBOARD_ETIQUETAS_EJE)
+        })
     )
     etiquetas_linea = [
         {'x': datos_linea[indice]['x'],
@@ -251,12 +278,13 @@ def dashboard(request: HttpRequest) -> HttpResponse:
 
     # Gráfico de barras de 6 meses
     primer_mes_numero = (
-        hoy.year * 12 + hoy.month - 1 - (DASHBOARD_GRAFICO_MESES - 1)
+        hoy.year * DASHBOARD_MESES_POR_ANIO + hoy.month - 1
+        - (DASHBOARD_GRAFICO_MESES - 1)
     )
     meses = []
     for indice in range(DASHBOARD_GRAFICO_MESES):
         mes_numero = primer_mes_numero + indice
-        anio, mes = divmod(mes_numero, 12)
+        anio, mes = divmod(mes_numero, DASHBOARD_MESES_POR_ANIO)
         mes += 1
         meses.append({
             'llave': (anio, mes),
@@ -303,8 +331,10 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         .filter(unidades__gt=0).order_by('-unidades', 'nombre')
     )
     if len(categorias) > DASHBOARD_CATEGORIAS_MAXIMAS:
-        unidades_otros = sum(c.unidades for c in categorias[4:])
-        categorias = categorias[:4] + [
+        unidades_otros = sum(
+            c.unidades for c in categorias[DASHBOARD_CATEGORIAS_MAXIMAS - 1:]
+        )
+        categorias = categorias[:DASHBOARD_CATEGORIAS_MAXIMAS - 1] + [
             {'nombre': 'Otras categorías', 'unidades': unidades_otros, 'pk': None}
         ]
     circunferencia = DASHBOARD_DONUT_CIRCUNFERENCIA
@@ -322,20 +352,30 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             if total_unidades else 0
         )
         trazo = round(
-            porcentaje * circunferencia / DASHBOARD_PORCENTAJE_TOTAL, 2
+            porcentaje * circunferencia / DASHBOARD_PORCENTAJE_TOTAL,
+            DASHBOARD_DECIMALES_GRAFICO,
         )
         if isinstance(categoria, dict):
             categoria['porcentaje'] = porcentaje
             categoria['trazo'] = trazo
-            categoria['offset'] = round(-desplazamiento, 2)
-            categoria['restante'] = round(circunferencia - trazo, 2)
+            # El desplazamiento acumulado posiciona cada segmento del anillo.
+            categoria['offset'] = round(
+                -desplazamiento, DASHBOARD_DECIMALES_GRAFICO
+            )
+            categoria['restante'] = round(
+                circunferencia - trazo, DASHBOARD_DECIMALES_GRAFICO
+            )
             categoria['color'] = colores_categorias[indice %
                                                     len(colores_categorias)]
         else:
             categoria.porcentaje = porcentaje
             categoria.trazo = trazo
-            categoria.offset = round(-desplazamiento, 2)
-            categoria.restante = round(circunferencia - trazo, 2)
+            categoria.offset = round(
+                -desplazamiento, DASHBOARD_DECIMALES_GRAFICO
+            )
+            categoria.restante = round(
+                circunferencia - trazo, DASHBOARD_DECIMALES_GRAFICO
+            )
             categoria.color = colores_categorias[indice % len(
                 colores_categorias)]
         desplazamiento += trazo

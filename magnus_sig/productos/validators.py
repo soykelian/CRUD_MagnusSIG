@@ -5,6 +5,12 @@ import unicodedata
 
 from django.core.exceptions import ValidationError
 
+TELEFONO_COLOMBIANO_DIGITOS = 10
+CODIGO_PAIS_COLOMBIA = '57'
+TELEFONO_INTERNACIONAL_DIGITOS_MINIMOS = 8
+TELEFONO_INTERNACIONAL_DIGITOS_MAXIMOS = 15
+DIRECCION_CARACTERES_MINIMOS = 5
+
 
 def validar_nit(valor):
     """Acepta NIT base de 8 a 10 dígitos, con DV opcional separado por guion."""
@@ -58,11 +64,20 @@ def validar_telefono_colombiano(valor):
             "El signo + solo puede aparecer una vez y al inicio del teléfono.")
 
     digitos = re.sub(r"\D", "", telefono)
-    if len(digitos) == 10:
+    if len(digitos) == TELEFONO_COLOMBIANO_DIGITOS:
         return telefono
-    if digitos.startswith("57") and len(digitos) == 12:
+    digitos_con_codigo_pais = (
+        len(digitos)
+        == TELEFONO_COLOMBIANO_DIGITOS + len(CODIGO_PAIS_COLOMBIA)
+    )
+    if digitos.startswith(CODIGO_PAIS_COLOMBIA) and digitos_con_codigo_pais:
         return telefono
-    if telefono.lstrip().startswith("+") and 8 <= len(digitos) <= 15:
+    if (
+        telefono.lstrip().startswith("+")
+        and TELEFONO_INTERNACIONAL_DIGITOS_MINIMOS
+        <= len(digitos)
+        <= TELEFONO_INTERNACIONAL_DIGITOS_MAXIMOS
+    ):
         return telefono
 
     raise ValidationError(
@@ -76,7 +91,7 @@ def validar_direccion(valor):
     direccion = " ".join((valor or "").split())
     if not direccion:
         return direccion
-    if len(direccion) < 5:
+    if len(direccion) < DIRECCION_CARACTERES_MINIMOS:
         raise ValidationError("La dirección debe tener al menos 5 caracteres.")
     if any(unicodedata.category(caracter).startswith("C") for caracter in direccion):
         raise ValidationError(
