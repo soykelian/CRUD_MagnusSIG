@@ -25,7 +25,7 @@ El dashboard, las alertas de stock bajo y el gráfico de tendencia se calculan e
 | **Salidas (Despachos)** | `/salidas/` | Despacho a clientes o áreas internas: valida existencias disponibles y descuenta inventario. |
 | **Proveedores** | `/proveedores/` | Directorio de proveedores con documento (NIT/CC), contacto comercial, dirección y teléfono. |
 | **Clientes** | `/clientes/` | Directorio de empresas y clientes vinculados con despachos y contratos de servicios. |
-| **Reportes** | `/reportes/` | Métricas de rendimiento, desglose de inventario y exportación de datos en formato CSV. |
+| **Reportes** | `/reportes/` | Métricas de rendimiento y desglose de inventario, con exportación de reportes a PDF, Excel y Word, además de CSV para inventario y movimientos. |
 | **Configuración** | `/configuracion/` | Parámetros globales: nombre de la empresa, moneda y umbral configurable de stock mínimo. |
 | **Panel Administrativo** | `/admin/` | Gestión avanzada de usuarios, grupos, permisos y auditoría interna de Django. |
 
@@ -109,6 +109,7 @@ Ejecuta todos los comandos desde la **raíz del repositorio** (`CRUD_MagnusSIG`)
 * **Python 3.12 o superior** instalado.
 * **Node.js 18 o superior (LTS)** y **npm** instalados.
 * **MySQL Server 8.0+** instalado y en ejecución (o XAMPP/WAMP con MySQL).
+* **Cliente de línea de comandos de MySQL** disponible en PowerShell para ejecutar los comandos `mysql` de creación e importación; también se puede crear e importar la base desde Workbench o phpMyAdmin.
 
 ---
 
@@ -148,7 +149,7 @@ MYSQL_PORT=3306
 *(Si no dispones de MySQL instalado en tu máquina, puedes descomentar `DJANGO_USE_SQLITE=1` en tu archivo `.env` para trabajar temporalmente con SQLite local).*
 
 #### Paso D: Crear la base de datos en MySQL
-En tu gestor de MySQL (Workbench, phpMyAdmin o terminal), crea la base de datos e importa el script inicial:
+En tu gestor de MySQL (Workbench, phpMyAdmin o terminal), crea la base de datos e importa el script inicial. Los comandos siguientes requieren el cliente `mysql` instalado y disponible en el `PATH` de PowerShell; si no está disponible, realiza ambas operaciones desde Workbench o phpMyAdmin:
 ```powershell
 # En la consola de MySQL o PowerShell:
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS magnussig_inventario CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
@@ -370,7 +371,7 @@ git log --oneline -5            # Ver el historial de los últimos 5 commits
 El sistema cuenta con un control de acceso basado en grupos y roles de Django:
 
 * **Administrador (Superusuario):**
-  * Acceso total a todos los módulos: Productos, Categorías, Proveedores, Clientes, Servicios SG-SST, Entradas, Salidas, Movimientos, Reportes con exportación CSV y Configuración.
+  * Acceso total a todos los módulos: Productos, Categorías, Proveedores, Clientes, Servicios SG-SST, Entradas, Salidas, Movimientos, Reportes con exportación PDF, Excel, Word y CSV, y Configuración.
   * Acceso al panel administrativo de Django en `/admin/`.
 * **Vendedor:**
   * Acceso operativo enfocado: consulta de existencias en Inventario y Catálogo, registro de clientes y ejecución de despachos (Salidas permitidas).
