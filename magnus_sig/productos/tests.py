@@ -30,7 +30,8 @@ class CrudProductosTests(TestCase):
         )
         sincronizar_usuario_bd(usuario)
         self.client.force_login(usuario)
-        self.cat = Categoria.objects.create(nombre='Periféricos', descripcion='Teclados y ratones')
+        self.cat = Categoria.objects.create(
+            nombre='Periféricos', descripcion='Teclados y ratones')
 
     def _producto(self, **kw):
         datos = dict(
@@ -61,7 +62,8 @@ class CrudProductosTests(TestCase):
         ]:
             with self.subTest(nombre):
                 self.assertEqual(
-                    self.client.get(reverse(f'productos:{nombre}', args=args)).status_code, 200
+                    self.client.get(
+                        reverse(f'productos:{nombre}', args=args)).status_code, 200
                 )
 
     def test_crear_producto(self):
@@ -103,7 +105,10 @@ class CrudProductosTests(TestCase):
         self.assertEqual(Producto.objects.count(), 0)
 
     def test_editar_precarga_y_guarda(self):
-        p = self._producto(codigo='TEC-001', nombre='Teclado USB', precio=Decimal('45000'), cantidad=20)
+        p = self._producto(
+            codigo='TEC-001', nombre='Teclado USB',
+            precio=Decimal('45000'), cantidad=20,
+        )
         r = self.client.get(reverse('productos:editar', args=[p.pk]))
         self.assertContains(r, 'value="Teclado USB"')
         self.assertContains(r, 'value="45000.00"')
@@ -129,29 +134,51 @@ class CrudProductosTests(TestCase):
 
     def test_eliminar_producto_por_post(self):
         p = self._producto()
-        self.assertEqual(self.client.get(reverse('productos:eliminar', args=[p.pk])).status_code, 200)
+        response = self.client.get(reverse('productos:eliminar', args=[p.pk]))
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(Producto.objects.count(), 1)
         self.client.post(reverse('productos:eliminar', args=[p.pk]))
         self.assertEqual(Producto.objects.count(), 0)
 
     def test_producto_inexistente_404(self):
-        self.assertEqual(self.client.get(reverse('productos:detalle', args=[999])).status_code, 404)
+        response = self.client.get(reverse('productos:detalle', args=[999]))
+        self.assertEqual(response.status_code, 404)
 
     def test_busqueda_filtros_y_paginacion(self):
         for i in range(10):
-            self._producto(codigo=f'ITM-{i}', nombre=f'Item {i}', cantidad=0 if i == 0 else 3 if i == 1 else 50)
+            cantidad = 0 if i == 0 else 3 if i == 1 else 50
+            self._producto(codigo=f'ITM-{i}',
+                           nombre=f'Item {i}', cantidad=cantidad)
         r = self.client.get(reverse('productos:lista'))
         self.assertEqual(len(r.context['pagina']), 8)
         self.assertEqual(r.context['total_productos'], 10)
-        self.assertEqual(len(self.client.get(reverse('productos:lista') + '?page=2').context['pagina']), 2)
-        self.assertEqual(len(self.client.get(reverse('productos:buscar') + '?q=Item 3').context['pagina']), 1)
-        self.assertEqual(len(self.client.get(reverse('productos:lista') + '?existencias=out').context['pagina']), 1)
-        self.assertEqual(len(self.client.get(reverse('productos:lista') + '?existencias=low').context['pagina']), 1)
-        self.assertEqual(len(self.client.get(reverse('productos:lista') + f'?categoria={self.cat.pk}').context['pagina']), 8)
+        pagina_dos = self.client.get(
+            reverse('productos:lista') + '?page=2'
+        ).context['pagina']
+        pagina_busqueda = self.client.get(
+            reverse('productos:buscar') + '?q=Item 3'
+        ).context['pagina']
+        pagina_agotados = self.client.get(
+            reverse('productos:lista') + '?existencias=out'
+        ).context['pagina']
+        pagina_stock_bajo = self.client.get(
+            reverse('productos:lista') + '?existencias=low'
+        ).context['pagina']
+        pagina_categoria = self.client.get(
+            reverse('productos:lista') + f'?categoria={self.cat.pk}'
+        ).context['pagina']
+        self.assertEqual(len(pagina_dos), 2)
+        self.assertEqual(len(pagina_busqueda), 1)
+        self.assertEqual(len(pagina_agotados), 1)
+        self.assertEqual(len(pagina_stock_bajo), 1)
+        self.assertEqual(len(pagina_categoria), 8)
 
     def test_sin_categorias_redirige(self):
         Categoria.objects.all().delete()
-        self.assertRedirects(self.client.get(reverse('productos:crear')), reverse('productos:categoria_crear'))
+        self.assertRedirects(
+            self.client.get(reverse('productos:crear')),
+            reverse('productos:categoria_crear'),
+        )
 
 
 class CrudCategoriasTests(TestCase):
@@ -163,26 +190,37 @@ class CrudCategoriasTests(TestCase):
         self.client.force_login(usuario)
 
     def test_crear_y_nombre_repetido(self):
-        self.client.post(reverse('productos:categoria_crear'), {'nombre': 'Audio', 'descripcion': '', 'estado': 'activo'})
-        r = self.client.post(reverse('productos:categoria_crear'), {'nombre': 'audio', 'descripcion': '', 'estado': 'activo'})
+        datos = {'nombre': 'Audio', 'descripcion': '', 'estado': 'activo'}
+        self.client.post(reverse('productos:categoria_crear'), datos)
+        datos['nombre'] = 'audio'
+        r = self.client.post(reverse('productos:categoria_crear'), datos)
         self.assertContains(r, 'Ya existe una categoría con ese nombre.')
         self.assertEqual(Categoria.objects.count(), 1)
 
     def test_editar(self):
         c = Categoria.objects.create(nombre='Audio')
-        self.client.post(reverse('productos:categoria_editar', args=[c.pk]), {'nombre': 'Sonido', 'descripcion': 'd', 'estado': 'activo'})
+        self.client.post(
+            reverse('productos:categoria_editar', args=[c.pk]),
+            {'nombre': 'Sonido', 'descripcion': 'd', 'estado': 'activo'},
+        )
         c.refresh_from_db()
         self.assertEqual(c.nombre, 'Sonido')
 
     def test_no_elimina_con_productos(self):
         c = Categoria.objects.create(nombre='Audio')
-        Producto.objects.create(codigo='P1', nombre='P', id_categoria=c, precio_compra=1, precio_venta=1, unidad_medida='Unidad')
+        Producto.objects.create(
+            codigo='P1', nombre='P', id_categoria=c, precio_compra=1,
+            precio_venta=1, unidad_medida='Unidad',
+        )
         self.client.post(reverse('productos:categoria_eliminar', args=[c.pk]))
         self.assertTrue(Categoria.objects.filter(pk=c.pk).exists())
 
     def test_elimina_vacia_solo_por_post(self):
         c = Categoria.objects.create(nombre='Audio')
-        self.assertEqual(self.client.get(reverse('productos:categoria_eliminar', args=[c.pk])).status_code, 405)
+        response = self.client.get(
+            reverse('productos:categoria_eliminar', args=[c.pk])
+        )
+        self.assertEqual(response.status_code, 405)
         self.client.post(reverse('productos:categoria_eliminar', args=[c.pk]))
         self.assertFalse(Categoria.objects.exists())
 
@@ -190,7 +228,8 @@ class CrudCategoriasTests(TestCase):
         for n in ('Beta', 'Alfa'):
             Categoria.objects.create(nombre=n)
         r = self.client.get(reverse('productos:categorias') + '?orden=desc')
-        self.assertEqual([c.nombre for c in r.context['categorias']], ['Beta', 'Alfa'])
+        self.assertEqual(
+            [c.nombre for c in r.context['categorias']], ['Beta', 'Alfa'])
         r = self.client.get(reverse('productos:categorias') + '?q=alf')
         self.assertEqual(len(r.context['categorias']), 1)
 
@@ -215,7 +254,9 @@ class PersistenciaOperacionesTests(TestCase):
         self.producto.cantidad = 10
 
     def test_entrada_pendiente_se_guarda_y_al_recibir_suma_stock(self):
-        proveedor = Proveedor.objects.create(nit='900111222', razon_social='Proveedor Uno', estado='activo')
+        proveedor = Proveedor.objects.create(
+            nit='900111222', razon_social='Proveedor Uno', estado='activo'
+        )
         response = self.client.post(
             reverse('productos:entrada_nueva'),
             {
@@ -231,15 +272,18 @@ class PersistenciaOperacionesTests(TestCase):
         self.assertEqual(entrada.estado, 'borrador')
         self.assertEqual(self.producto.cantidad, 10)
 
-        self.client.post(reverse('productos:entrada_recibir', args=[entrada.pk]))
+        self.client.post(
+            reverse('productos:entrada_recibir', args=[entrada.pk]))
         entrada.refresh_from_db()
         self.assertEqual(entrada.estado, 'recibida')
         self.assertEqual(self.producto.cantidad, 14)
-        self.assertEqual(MovimientoInventario.objects.get().cantidad, Decimal('4'))
+        self.assertEqual(
+            MovimientoInventario.objects.get().cantidad, Decimal('4'))
 
     def test_salida_se_guarda_y_solo_descuenta_al_despachar(self):
         cliente = Cliente.objects.create(
-            tipo_documento='NIT', numero_documento='800111222', razon_social='Cliente Uno', estado='activo'
+            tipo_documento='NIT', numero_documento='800111222',
+            razon_social='Cliente Uno', estado='activo',
         )
         response = self.client.post(
             reverse('productos:salida_nueva'),
@@ -255,15 +299,18 @@ class PersistenciaOperacionesTests(TestCase):
         self.assertEqual(salida.estado, 'borrador')
         self.assertEqual(self.producto.cantidad, 10)
 
-        self.client.post(reverse('productos:salida_despachar', args=[salida.pk]))
+        self.client.post(
+            reverse('productos:salida_despachar', args=[salida.pk]))
         salida.refresh_from_db()
         self.assertEqual(salida.estado, 'confirmada')
         self.assertEqual(self.producto.cantidad, 7)
-        self.assertEqual(MovimientoInventario.objects.get().cantidad, Decimal('3'))
+        self.assertEqual(
+            MovimientoInventario.objects.get().cantidad, Decimal('3'))
 
     def test_no_se_puede_registrar_salida_mayor_al_stock(self):
         cliente = Cliente.objects.create(
-            tipo_documento='NIT', numero_documento='800333444', razon_social='Cliente Dos', estado='activo'
+            tipo_documento='NIT', numero_documento='800333444',
+            razon_social='Cliente Dos', estado='activo',
         )
         response = self.client.post(
             reverse('productos:salida_nueva'),
@@ -289,13 +336,16 @@ class PersistenciaOperacionesTests(TestCase):
         )
         self.assertRedirects(response, reverse('productos:movimientos'))
         self.assertEqual(self.producto.cantidad, 12)
-        self.assertEqual(MovimientoInventario.objects.get().motivo, 'Reposición')
+        self.assertEqual(
+            MovimientoInventario.objects.get().motivo, 'Reposición')
 
     def test_modulo_servicios_responde_y_guarda(self):
         cliente = Cliente.objects.create(
-            tipo_documento='NIT', numero_documento='900999888', razon_social='Constructora Bolivar', estado='activo'
+            tipo_documento='NIT', numero_documento='900999888',
+            razon_social='Constructora Bolivar', estado='activo',
         )
-        tipo_srv = TipoServicio.objects.create(nombre='Auditoría ISO 45001')
+        tipo_srv, _ = TipoServicio.objects.get_or_create(
+            nombre='Auditoría ISO 45001')
         r = self.client.get(reverse('productos:servicios'))
         self.assertEqual(r.status_code, 200)
 
@@ -331,17 +381,27 @@ class PersistenciaOperacionesTests(TestCase):
             'configuracion',
         ):
             with self.subTest(pagina=nombre):
-                self.assertEqual(self.client.get(reverse(f'productos:{nombre}')).status_code, 200)
+                self.assertEqual(self.client.get(
+                    reverse(f'productos:{nombre}')).status_code, 200)
 
     def test_vendedor_ve_sus_secciones_y_no_puede_administrar_catalogos(self):
-        vendedor = get_user_model().objects.create_user(username='vendedor', password='Pruebas-123!')
+        vendedor = get_user_model().objects.create_user(
+            username='vendedor', password='Pruebas-123!'
+        )
         vendedor.groups.add(Group.objects.create(name='Vendedor'))
         sincronizar_usuario_bd(vendedor)
         self.client.force_login(vendedor)
-        self.assertEqual(self.client.get(reverse('productos:dashboard')).status_code, 200)
-        self.assertEqual(self.client.get(reverse('productos:salidas')).status_code, 200)
-        self.assertEqual(self.client.get(reverse('productos:clientes')).status_code, 200)
-        self.assertEqual(self.client.get(reverse('productos:servicios')).status_code, 200)
-        self.assertEqual(self.client.get(reverse('productos:entradas')).status_code, 403)
-        self.assertEqual(self.client.get(reverse('productos:proveedores')).status_code, 403)
-        self.assertEqual(self.client.get(reverse('productos:configuracion')).status_code, 403)
+        self.assertEqual(self.client.get(
+            reverse('productos:dashboard')).status_code, 200)
+        self.assertEqual(self.client.get(
+            reverse('productos:salidas')).status_code, 200)
+        self.assertEqual(self.client.get(
+            reverse('productos:clientes')).status_code, 200)
+        self.assertEqual(self.client.get(
+            reverse('productos:servicios')).status_code, 200)
+        self.assertEqual(self.client.get(
+            reverse('productos:entradas')).status_code, 403)
+        self.assertEqual(self.client.get(
+            reverse('productos:proveedores')).status_code, 403)
+        self.assertEqual(self.client.get(
+            reverse('productos:configuracion')).status_code, 403)

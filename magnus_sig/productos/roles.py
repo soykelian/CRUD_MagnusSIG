@@ -10,12 +10,15 @@ GRUPO_VENDEDOR = 'Vendedor'
 
 
 def es_administrador(user):
+    """Indica si la cuenta tiene privilegios administrativos."""
     return user.is_authenticated and (
-        user.is_superuser or user.groups.filter(name=GRUPO_ADMINISTRADOR).exists()
+        user.is_superuser or user.groups.filter(
+            name=GRUPO_ADMINISTRADOR).exists()
     )
 
 
 def es_vendedor(user):
+    """Indica si la cuenta pertenece al grupo Vendedor."""
     return user.is_authenticated and user.groups.filter(name=GRUPO_VENDEDOR).exists()
 
 
@@ -24,6 +27,7 @@ def requiere_acceso_inventario(view):
     @login_required
     @wraps(view)
     def wrapped(request, *args, **kwargs):
+        """Exige autenticación y uno de los roles operativos."""
         if not (es_administrador(request.user) or es_vendedor(request.user)):
             raise PermissionDenied
         return view(request, *args, **kwargs)
@@ -36,6 +40,7 @@ def requiere_administrador(view):
     @login_required
     @wraps(view)
     def wrapped(request, *args, **kwargs):
+        """Exige que la cuenta autenticada sea administradora."""
         if not es_administrador(request.user):
             raise PermissionDenied
         return view(request, *args, **kwargs)

@@ -1,4 +1,4 @@
-"""Vistas del inventario: CRUD de productos, categorías y servicios sobre MySQL magnussig_inventario."""
+"""Vistas para la gestión del inventario y sus operaciones relacionadas."""
 
 from decimal import Decimal
 from datetime import date, datetime, time, timedelta
@@ -56,9 +56,20 @@ from .services.stock import (
 )
 
 POR_PAGINA = 8
+DASHBOARD_PERIODOS = {'7d': 7, '30d': 30, '90d': 90, '1a': 365}
+DASHBOARD_GRAFICO_MESES = 6
+DASHBOARD_CATEGORIAS_MAXIMAS = 5
+DASHBOARD_ITEMS_RECIENTES = 5
+MOVIMIENTOS_RECIENTES_MAXIMOS = 10
+DASHBOARD_PRODUCTOS_CRITICOS = 5
+DASHBOARD_PORCENTAJE_TOTAL = 100
+DASHBOARD_DONUT_CIRCUNFERENCIA = 276.46
+DASHBOARD_ESCALA_VERTICAL = 160
+DASHBOARD_GRAFICO_ALTO = 130
 
 
 def exportar_csv(nombre: str, encabezados: list[str], filas) -> HttpResponse:
+    """Construye una descarga CSV con encabezados y filas de datos."""
     import csv
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="{nombre}"'
@@ -71,6 +82,7 @@ def exportar_csv(nombre: str, encabezados: list[str], filas) -> HttpResponse:
 
 @requiere_acceso_inventario
 def dashboard(request: HttpRequest) -> HttpResponse:
+    """Calcula indicadores, tendencias de inventario y actividad según el rol."""
     administrador = es_administrador(request.user)
     stock_minimo = obtener_stock_minimo()
     hoy = timezone.localdate()
@@ -99,11 +111,13 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         cantidad_actual__gt=F('id_producto__stock_minimo')
     ).count()
     porcentaje_stock_saludable = (
-        round(total_stock_saludable * 100 / total_productos) if total_productos else 0
+        round(
+            total_stock_saludable * DASHBOARD_PORCENTAJE_TOTAL / total_productos
+        ) if total_productos else 0
     )
     total_categorias = Categoria.objects.count()
 
-    periodos = {'7d': 7, '30d': 30, '90d': 90, '1a': 365}
+    periodos = DASHBOARD_PERIODOS
     periodo = request.GET.get('periodo', '30d')
     if periodo not in periodos:
         periodo = '30d'
@@ -116,7 +130,8 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         fecha_inicio = hoy - timedelta(days=periodos[periodo] - 1)
 
     dias_periodo = (hoy - fecha_inicio).days + 1
-    variacion_diaria = {fecha_inicio + timedelta(days=i): 0 for i in range(dias_periodo)}
+    variacion_diaria = {fecha_inicio +
+                        timedelta(days=i): 0 for i in range(dias_periodo)}
 
     usuario_bd = sincronizar_usuario_bd(request.user)
     inicio_dt = timezone.make_aware(datetime.combine(fecha_inicio, time.min))
@@ -130,7 +145,8 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         )
 
     registros_periodo = list(
-        movimientos_periodo.values_list('fecha_movimiento', 'tipo_movimiento', 'cantidad')
+        movimientos_periodo.values_list(
+            'fecha_movimiento', 'tipo_movimiento', 'cantidad')
     )
     for fecha, tipo, cantidad in registros_periodo:
         dia = timezone.localtime(fecha).date()
@@ -140,7 +156,10 @@ def dashboard(request: HttpRequest) -> HttpResponse:
 
     variacion_acumulada = sum(variacion_diaria.values())
 
-    nombres_meses = ('Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic')
+    nombres_meses = (
+        'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+        'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+    )
     intervalos = []
     if periodo == '1a':
         numero_mes_actual = hoy.year * 12 + hoy.month - 1
@@ -150,7 +169,11 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             mes = mes_cero + 1
             inicio_mes = date(anio, mes, 1)
             fin_mes = min(date(anio, mes, monthrange(anio, mes)[1]), hoy)
-            intervalos.append({'inicio': inicio_mes, 'fin': fin_mes, 'etiqueta': nombres_meses[mes - 1]})
+            intervalos.append({
+                'inicio': inicio_mes,
+                'fin': fin_mes,
+                'etiqueta': nombres_meses[mes - 1],
+            })
     elif periodo == '90d':
         for desplazamiento in range(0, dias_periodo, 7):
             inicio = fecha_inicio + timedelta(days=desplazamiento)
@@ -187,7 +210,8 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             intervalos[indice]['salidas'] += int(cantidad)
 
     escala_grafico = max(
-        (max(intervalo['entradas'], intervalo['salidas']) for intervalo in intervalos),
+        (max(intervalo['entradas'], intervalo['salidas'])
+         for intervalo in intervalos),
         default=0,
     ) or 1
     escala_media = round(escala_grafico / 2)
@@ -198,8 +222,14 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             punto['x'] = round(55 + (indice + 0.5) * 835 / len(intervalos))
         else:
             punto['x'] = round(55 + indice * 835 / max(1, len(intervalos) - 1))
-        punto['y_entradas'] = round(160 - intervalo['entradas'] * 130 / escala_grafico)
-        punto['y_salidas'] = round(160 - intervalo['salidas'] * 130 / escala_grafico)
+        punto['y_entradas'] = round(
+            DASHBOARD_ESCALA_VERTICAL
+            - intervalo['entradas'] * DASHBOARD_GRAFICO_ALTO / escala_grafico
+        )
+        punto['y_salidas'] = round(
+            DASHBOARD_ESCALA_VERTICAL
+            - intervalo['salidas'] * DASHBOARD_GRAFICO_ALTO / escala_grafico
+        )
         datos_linea.append(punto)
 
     indices_etiqueta = (
@@ -207,7 +237,8 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         else sorted({round(indice * (len(datos_linea) - 1) / 4) for indice in range(5)})
     )
     etiquetas_linea = [
-        {'x': datos_linea[indice]['x'], 'texto': datos_linea[indice]['etiqueta']}
+        {'x': datos_linea[indice]['x'],
+            'texto': datos_linea[indice]['etiqueta']}
         for indice in indices_etiqueta
     ]
     hay_actividad_periodo = bool(registros_periodo)
@@ -219,9 +250,11 @@ def dashboard(request: HttpRequest) -> HttpResponse:
     )
 
     # Gráfico de barras de 6 meses
-    primer_mes_numero = hoy.year * 12 + hoy.month - 1 - 5
+    primer_mes_numero = (
+        hoy.year * 12 + hoy.month - 1 - (DASHBOARD_GRAFICO_MESES - 1)
+    )
     meses = []
-    for indice in range(6):
+    for indice in range(DASHBOARD_GRAFICO_MESES):
         mes_numero = primer_mes_numero + indice
         anio, mes = divmod(mes_numero, 12)
         mes += 1
@@ -241,7 +274,8 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         movimientos_seis_meses = movimientos_seis_meses.filter(
             tipo_movimiento='salida', id_usuario=usuario_bd
         )
-    for fecha, tipo, cantidad in movimientos_seis_meses.values_list('fecha_movimiento', 'tipo_movimiento', 'cantidad'):
+    campos_movimiento = ('fecha_movimiento', 'tipo_movimiento', 'cantidad')
+    for fecha, tipo, cantidad in movimientos_seis_meses.values_list(*campos_movimiento):
         local_fecha = timezone.localtime(fecha).date()
         fila_mes = resumen_meses.get((local_fecha.year, local_fecha.month))
         if not fila_mes:
@@ -255,41 +289,60 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         (max(fila['entradas'], fila['salidas']) for fila in meses), default=0
     ) or 1
     for fila in meses:
-        fila['entradas_pct'] = round(fila['entradas'] * 100 / escala_mensual)
-        fila['salidas_pct'] = round(fila['salidas'] * 100 / escala_mensual)
+        fila['entradas_pct'] = round(
+            fila['entradas'] * DASHBOARD_PORCENTAJE_TOTAL / escala_mensual
+        )
+        fila['salidas_pct'] = round(
+            fila['salidas'] * DASHBOARD_PORCENTAJE_TOTAL / escala_mensual
+        )
 
     # Donut de categorías
     categorias = list(
-        Categoria.objects.annotate(unidades=Sum('productos__inventario_rel__cantidad_actual'))
+        Categoria.objects.annotate(unidades=Sum(
+            'productos__inventario_rel__cantidad_actual'))
         .filter(unidades__gt=0).order_by('-unidades', 'nombre')
     )
-    if len(categorias) > 5:
+    if len(categorias) > DASHBOARD_CATEGORIAS_MAXIMAS:
         unidades_otros = sum(c.unidades for c in categorias[4:])
         categorias = categorias[:4] + [
             {'nombre': 'Otras categorías', 'unidades': unidades_otros, 'pk': None}
         ]
-    circunferencia = 276.46
+    circunferencia = DASHBOARD_DONUT_CIRCUNFERENCIA
     desplazamiento = 0
-    colores_categorias = ('#2e3192', '#269dd8', '#ff931e', '#6268ba', '#72c8e8')
+    colores_categorias = ('#2e3192', '#269dd8',
+                          '#ff931e', '#6268ba', '#72c8e8')
     for indice, categoria in enumerate(categorias):
-        unidades = getattr(categoria, 'unidades', 0) if hasattr(categoria, 'unidades') else categoria.get('unidades', 0)
-        porcentaje = round(unidades * 100 / total_unidades) if total_unidades else 0
-        trazo = round(porcentaje * circunferencia / 100, 2)
+        unidades = (
+            getattr(categoria, 'unidades', 0)
+            if hasattr(categoria, 'unidades')
+            else categoria.get('unidades', 0)
+        )
+        porcentaje = (
+            round(unidades * DASHBOARD_PORCENTAJE_TOTAL / total_unidades)
+            if total_unidades else 0
+        )
+        trazo = round(
+            porcentaje * circunferencia / DASHBOARD_PORCENTAJE_TOTAL, 2
+        )
         if isinstance(categoria, dict):
             categoria['porcentaje'] = porcentaje
             categoria['trazo'] = trazo
             categoria['offset'] = round(-desplazamiento, 2)
             categoria['restante'] = round(circunferencia - trazo, 2)
-            categoria['color'] = colores_categorias[indice % len(colores_categorias)]
+            categoria['color'] = colores_categorias[indice %
+                                                    len(colores_categorias)]
         else:
             categoria.porcentaje = porcentaje
             categoria.trazo = trazo
             categoria.offset = round(-desplazamiento, 2)
             categoria.restante = round(circunferencia - trazo, 2)
-            categoria.color = colores_categorias[indice % len(colores_categorias)]
+            categoria.color = colores_categorias[indice % len(
+                colores_categorias)]
         desplazamiento += trazo
 
-    movimientos_recientes = MovimientoInventario.objects.select_related('id_producto', 'id_usuario')
+    movimientos_recientes = MovimientoInventario.objects.select_related(
+        'id_producto', 'id_usuario'
+    )
     salidas_pendientes = Venta.objects.filter(estado=Venta.Estado.BORRADOR)
     if not administrador and usuario_bd:
         movimientos_recientes = movimientos_recientes.filter(
@@ -299,9 +352,12 @@ def dashboard(request: HttpRequest) -> HttpResponse:
 
     productos_revision = Producto.objects.select_related('id_categoria', 'inventario_rel').filter(
         inventario_rel__cantidad_actual__lte=F('stock_minimo')
-    ).order_by('inventario_rel__cantidad_actual', 'nombre')[:5]
+    ).order_by(
+        'inventario_rel__cantidad_actual', 'nombre'
+    )[:DASHBOARD_PRODUCTOS_CRITICOS]
 
-    servicios_activos = Servicio.objects.filter(estado__in=['pendiente', 'en proceso']).count()
+    servicios_activos = Servicio.objects.filter(
+        estado__in=['pendiente', 'en proceso']).count()
 
     contexto = {
         'total_productos': total_productos,
@@ -327,8 +383,11 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         'meses': meses,
         'categorias_dashboard': categorias,
         'productos_revision': productos_revision,
-        'movimientos_recientes': movimientos_recientes[:5],
-        'entradas_pendientes': Compra.objects.filter(estado=Compra.Estado.BORRADOR).count() if administrador else 0,
+        'movimientos_recientes': movimientos_recientes[:DASHBOARD_ITEMS_RECIENTES],
+        'entradas_pendientes': (
+            Compra.objects.filter(estado=Compra.Estado.BORRADOR).count()
+            if administrador else 0
+        ),
         'salidas_pendientes': salidas_pendientes.count(),
         'servicios_activos': servicios_activos,
     }
@@ -337,17 +396,21 @@ def dashboard(request: HttpRequest) -> HttpResponse:
 
 @requiere_acceso_inventario
 def lista_productos(request: HttpRequest) -> HttpResponse:
+    """Lista productos con búsqueda, filtros de existencias y paginación."""
     stock_minimo = obtener_stock_minimo()
     q = request.GET.get('q', '').strip()
     categoria = request.GET.get('categoria', '').strip()
     existencias = request.GET.get('existencias', '').strip()
 
-    productos = Producto.objects.select_related('id_categoria', 'id_proveedor', 'inventario_rel').order_by(
+    productos = Producto.objects.select_related(
+        'id_categoria', 'id_proveedor', 'inventario_rel'
+    ).order_by(
         '-fecha_creacion', '-id_producto'
     )
     if q:
         productos = productos.filter(
-            Q(nombre__icontains=q) | Q(codigo__icontains=q) | Q(descripcion__icontains=q)
+            Q(nombre__icontains=q) | Q(codigo__icontains=q) | Q(
+                descripcion__icontains=q)
         )
     if categoria.isdigit():
         productos = productos.filter(id_categoria_id=int(categoria))
@@ -360,9 +423,11 @@ def lista_productos(request: HttpRequest) -> HttpResponse:
             inventario_rel__cantidad_actual__lte=F('stock_minimo'),
         )
     elif existencias == 'attention':
-        productos = productos.filter(inventario_rel__cantidad_actual__lte=F('stock_minimo'))
+        productos = productos.filter(
+            inventario_rel__cantidad_actual__lte=F('stock_minimo'))
     elif existencias == 'ok':
-        productos = productos.filter(inventario_rel__cantidad_actual__gt=F('stock_minimo'))
+        productos = productos.filter(
+            inventario_rel__cantidad_actual__gt=F('stock_minimo'))
 
     pagina = Paginator(productos, POR_PAGINA).get_page(request.GET.get('page'))
 
@@ -384,9 +449,13 @@ def lista_productos(request: HttpRequest) -> HttpResponse:
             cantidad_actual__gt=0, cantidad_actual__lte=F('id_producto__stock_minimo')
         ).count(),
         'total_agotados': Inventario.objects.filter(cantidad_actual__lte=0).count(),
-        'productos_revision': Producto.objects.select_related('id_categoria', 'inventario_rel').filter(
+        'productos_revision': Producto.objects.select_related(
+            'id_categoria', 'inventario_rel'
+        ).filter(
             inventario_rel__cantidad_actual__lte=F('stock_minimo')
-        ).order_by('inventario_rel__cantidad_actual', 'nombre')[:5],
+        ).order_by(
+            'inventario_rel__cantidad_actual', 'nombre'
+        )[:DASHBOARD_PRODUCTOS_CRITICOS],
     }
     plantilla = (
         'productos/_product_results.html'
@@ -398,13 +467,17 @@ def lista_productos(request: HttpRequest) -> HttpResponse:
 
 @requiere_acceso_inventario
 def catalogo_productos(request: HttpRequest) -> HttpResponse:
+    """Muestra el catálogo de productos con filtros de consulta."""
     q = request.GET.get('q', '').strip()
-    productos = Producto.objects.select_related('id_categoria', 'id_proveedor', 'inventario_rel').order_by(
+    productos = Producto.objects.select_related(
+        'id_categoria', 'id_proveedor', 'inventario_rel'
+    ).order_by(
         '-fecha_creacion', '-id_producto'
     )
     if q:
         productos = productos.filter(
-            Q(nombre__icontains=q) | Q(codigo__icontains=q) | Q(descripcion__icontains=q)
+            Q(nombre__icontains=q) | Q(codigo__icontains=q) | Q(
+                descripcion__icontains=q)
         )
     contexto = {
         'productos': productos,
@@ -422,19 +495,27 @@ def catalogo_productos(request: HttpRequest) -> HttpResponse:
 
 @requiere_acceso_inventario
 def detalle_producto(request: HttpRequest, pk: int) -> HttpResponse:
+    """Presenta la ficha de un producto y sus movimientos asociados."""
     producto = get_object_or_404(
-        Producto.objects.select_related('id_categoria', 'id_proveedor', 'inventario_rel'),
+        Producto.objects.select_related(
+            'id_categoria', 'id_proveedor', 'inventario_rel'),
         pk=pk,
     )
-    movimientos = producto.movimientos.select_related('id_usuario').order_by('-fecha_movimiento')
+    movimientos = producto.movimientos.select_related(
+        'id_usuario').order_by('-fecha_movimiento')
     usuario_bd = sincronizar_usuario_bd(request.user)
     if not es_administrador(request.user) and usuario_bd:
-        movimientos = movimientos.filter(tipo_movimiento='salida', id_usuario=usuario_bd)
+        movimientos = movimientos.filter(
+            tipo_movimiento='salida', id_usuario=usuario_bd)
 
-    tiene_historial = producto.movimientos.exists() or producto.detalles_compra.exists() or producto.detalles_venta.exists()
+    tiene_historial = (
+        producto.movimientos.exists()
+        or producto.detalles_compra.exists()
+        or producto.detalles_venta.exists()
+    )
     return render(request, 'productos/detalle.html', {
         'producto': producto,
-        'movimientos': movimientos[:10],
+        'movimientos': movimientos[:MOVIMIENTOS_RECIENTES_MAXIMOS],
         'tiene_historial': tiene_historial,
         'nivel_minimo_stock': obtener_stock_minimo(),
     })
@@ -442,8 +523,10 @@ def detalle_producto(request: HttpRequest, pk: int) -> HttpResponse:
 
 @requiere_administrador
 def crear_producto(request: HttpRequest) -> HttpResponse:
+    """Valida y registra un producto, incluyendo su existencia inicial."""
     if not Categoria.objects.filter(estado='activo').exists():
-        messages.warning(request, 'Primero crea una categoría para clasificar los productos.')
+        messages.warning(
+            request, 'Primero crea una categoría para clasificar los productos.')
         return redirect('productos:categoria_crear')
 
     form = ProductoForm(request.POST or None)
@@ -460,13 +543,17 @@ def crear_producto(request: HttpRequest) -> HttpResponse:
                     cantidad=Decimal(str(cantidad_inicial)),
                     motivo='Existencias iniciales al registrar el producto',
                 )
-        messages.success(request, f'Producto “{producto.nombre}” ({producto.codigo}) creado correctamente.')
+        messages.success(
+            request,
+            f'Producto “{producto.nombre}” ({producto.codigo}) creado correctamente.',
+        )
         return redirect('productos:lista')
     return render(request, 'productos/form.html', {'form': form, 'editando': False})
 
 
 @requiere_administrador
 def editar_producto(request: HttpRequest, pk: int) -> HttpResponse:
+    """Actualiza un producto y registra cambios de cantidad como movimiento."""
     producto = get_object_or_404(Producto, pk=pk)
     form = ProductoForm(request.POST or None, instance=producto)
     if request.method == 'POST' and form.is_valid():
@@ -485,7 +572,8 @@ def editar_producto(request: HttpRequest, pk: int) -> HttpResponse:
                     cantidad=Decimal(str(abs(diferencia))),
                     motivo='Ajuste de inventario al editar producto',
                 )
-        messages.success(request, f'Producto “{producto.nombre}” actualizado correctamente.')
+        messages.success(
+            request, f'Producto “{producto.nombre}” actualizado correctamente.')
         return redirect('productos:detalle', pk=producto.pk)
     return render(
         request, 'productos/form.html',
@@ -495,13 +583,20 @@ def editar_producto(request: HttpRequest, pk: int) -> HttpResponse:
 
 @requiere_administrador
 def eliminar_producto(request: HttpRequest, pk: int) -> HttpResponse:
-    producto = get_object_or_404(Producto.objects.select_related('id_categoria'), pk=pk)
-    tiene_historial = producto.movimientos.exists() or producto.detalles_compra.exists() or producto.detalles_venta.exists()
+    """Elimina productos sin historial y conserva los vinculados a operaciones."""
+    producto = get_object_or_404(
+        Producto.objects.select_related('id_categoria'), pk=pk)
+    tiene_historial = (
+        producto.movimientos.exists()
+        or producto.detalles_compra.exists()
+        or producto.detalles_venta.exists()
+    )
     if request.method == 'POST':
         if tiene_historial:
             messages.error(
                 request,
-                'No se puede eliminar un producto con historial de movimientos, compras o ventas para preservar la trazabilidad.'
+                'No se puede eliminar un producto con historial de movimientos, '
+                'compras o ventas para preservar la trazabilidad.'
             )
             return redirect('productos:detalle', pk=producto.pk)
         nombre = producto.nombre
@@ -520,13 +615,16 @@ def eliminar_producto(request: HttpRequest, pk: int) -> HttpResponse:
 
 @requiere_acceso_inventario
 def lista_categorias(request: HttpRequest) -> HttpResponse:
+    """Lista categorías y aplica búsqueda y ordenamiento."""
     q = request.GET.get('q', '').strip()
     orden = 'desc' if request.GET.get('orden') == 'desc' else 'asc'
 
     categorias = Categoria.objects.annotate(total=Count('productos'))
     if q:
-        categorias = categorias.filter(Q(nombre__icontains=q) | Q(descripcion__icontains=q))
-    categorias = categorias.order_by('-nombre' if orden == 'desc' else 'nombre')
+        categorias = categorias.filter(
+            Q(nombre__icontains=q) | Q(descripcion__icontains=q))
+    categorias = categorias.order_by(
+        '-nombre' if orden == 'desc' else 'nombre')
 
     return render(request, 'productos/categorias.html', {
         'categorias': categorias,
@@ -538,21 +636,25 @@ def lista_categorias(request: HttpRequest) -> HttpResponse:
 
 @requiere_administrador
 def crear_categoria(request: HttpRequest) -> HttpResponse:
+    """Valida y registra una categoría de productos."""
     form = CategoriaForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         categoria = form.save()
-        messages.success(request, f'Categoría “{categoria.nombre}” creada correctamente.')
+        messages.success(
+            request, f'Categoría “{categoria.nombre}” creada correctamente.')
         return redirect('productos:categorias')
     return render(request, 'productos/categoria_form.html', {'form': form, 'editando': False})
 
 
 @requiere_administrador
 def editar_categoria(request: HttpRequest, pk: int) -> HttpResponse:
+    """Actualiza los datos de una categoría existente."""
     categoria = get_object_or_404(Categoria, pk=pk)
     form = CategoriaForm(request.POST or None, instance=categoria)
     if request.method == 'POST' and form.is_valid():
         form.save()
-        messages.success(request, f'Categoría “{categoria.nombre}” actualizada.')
+        messages.success(
+            request, f'Categoría “{categoria.nombre}” actualizada.')
         return redirect('productos:categorias')
     return render(
         request, 'productos/categoria_form.html',
@@ -563,6 +665,7 @@ def editar_categoria(request: HttpRequest, pk: int) -> HttpResponse:
 @require_POST
 @requiere_administrador
 def eliminar_categoria(request: HttpRequest, pk: int) -> HttpResponse:
+    """Elimina una categoría cuando no tiene productos asociados."""
     categoria = get_object_or_404(Categoria, pk=pk)
     if categoria.productos.exists():
         messages.error(
@@ -580,11 +683,14 @@ def eliminar_categoria(request: HttpRequest, pk: int) -> HttpResponse:
 
 @requiere_acceso_inventario
 def movimientos(request: HttpRequest) -> HttpResponse:
+    """Consulta el historial de movimientos permitido para el usuario."""
     q = request.GET.get('q', '').strip()
-    registros = MovimientoInventario.objects.select_related('id_producto', 'id_usuario')
+    registros = MovimientoInventario.objects.select_related(
+        'id_producto', 'id_usuario')
     usuario_bd = sincronizar_usuario_bd(request.user)
     if not es_administrador(request.user) and usuario_bd:
-        registros = registros.filter(tipo_movimiento='salida', id_usuario=usuario_bd)
+        registros = registros.filter(
+            tipo_movimiento='salida', id_usuario=usuario_bd)
     if q:
         registros = registros.filter(
             Q(id_producto__nombre__icontains=q)
@@ -597,7 +703,8 @@ def movimientos(request: HttpRequest) -> HttpResponse:
     if request.GET.get('export') == 'csv':
         return exportar_csv(
             'movimientos.csv',
-            ['Fecha', 'Producto', 'Tipo', 'Cantidad', 'Referencia', 'Responsable', 'Motivo'],
+            ['Fecha', 'Producto', 'Tipo', 'Cantidad',
+                'Referencia', 'Responsable', 'Motivo'],
             (
                 [
                     m.fecha_movimiento,
@@ -621,11 +728,18 @@ def movimientos(request: HttpRequest) -> HttpResponse:
         'q': q,
         'total': registros.count(),
         'total_mes': registros.filter(
-            fecha_movimiento__gte=timezone.make_aware(datetime.combine(date(hoy.year, hoy.month, 1), time.min)),
-            fecha_movimiento__lte=timezone.make_aware(datetime.combine(hoy, time.max)),
+            fecha_movimiento__gte=timezone.make_aware(
+                datetime.combine(date(hoy.year, hoy.month, 1), time.min)
+            ),
+            fecha_movimiento__lte=timezone.make_aware(
+                datetime.combine(hoy, time.max)),
         ).count(),
         'cta': 'Registrar movimiento' if es_administrador(request.user) else 'Registrar salida',
-        'cta_url': 'productos:movimiento_nuevo' if es_administrador(request.user) else 'productos:salida_nueva',
+        'cta_url': (
+            'productos:movimiento_nuevo'
+            if es_administrador(request.user)
+            else 'productos:salida_nueva'
+        ),
         'entradas_mes': registros.filter(tipo_movimiento='entrada').count(),
         'salidas_mes': registros.filter(tipo_movimiento='salida').count(),
         'tipos_movimiento': [('entrada', 'Entrada'), ('salida', 'Salida'), ('ajuste', 'Ajuste')],
@@ -634,6 +748,7 @@ def movimientos(request: HttpRequest) -> HttpResponse:
 
 @requiere_administrador
 def crear_movimiento(request: HttpRequest) -> HttpResponse:
+    """Valida y registra un movimiento manual de existencias."""
     form = MovimientoForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         datos = form.cleaned_data
@@ -648,13 +763,19 @@ def crear_movimiento(request: HttpRequest) -> HttpResponse:
         except ValidationError as error:
             form.add_error('cantidad', error)
         if not form.errors:
-            messages.success(request, 'El movimiento se registró y el stock en MySQL fue actualizado.')
+            messages.success(
+                request,
+                'El movimiento se registró y el stock en MySQL fue actualizado.',
+            )
             return redirect('productos:movimientos')
     return render(request, 'productos/registro_form.html', {
         'form': form,
         'titulo': 'Registrar movimiento',
         'regreso': 'productos:movimientos',
-        'ayuda': 'Las entradas suman stock, las salidas lo descuentan y los ajustes corrigen variaciones de inventario.',
+        'ayuda': (
+            'Las entradas suman stock, las salidas lo descuentan y los ajustes '
+            'corrigen variaciones de inventario.'
+        ),
     })
 
 
@@ -662,7 +783,10 @@ def crear_movimiento(request: HttpRequest) -> HttpResponse:
 
 @requiere_administrador
 def entradas(request: HttpRequest) -> HttpResponse:
-    registros = Compra.objects.select_related('id_proveedor', 'id_usuario').prefetch_related('detalles__id_producto')
+    """Lista compras y entradas de mercancía con sus estados."""
+    registros = Compra.objects.select_related(
+        'id_proveedor', 'id_usuario'
+    ).prefetch_related('detalles__id_producto')
     q = request.GET.get('q', '').strip()
     if q:
         registros = registros.filter(
@@ -694,8 +818,10 @@ def entradas(request: HttpRequest) -> HttpResponse:
 
 @requiere_administrador
 def crear_entrada(request: HttpRequest) -> HttpResponse:
+    """Valida y registra una compra pendiente de recepción."""
     if not Producto.objects.filter(estado='activo').exists():
-        messages.warning(request, 'Primero registra al menos un producto en el inventario.')
+        messages.warning(
+            request, 'Primero registra al menos un producto en el inventario.')
         return redirect('productos:crear')
     if not Proveedor.objects.filter(estado='activo').exists():
         messages.warning(request, 'Primero registra un proveedor activo.')
@@ -709,7 +835,8 @@ def crear_entrada(request: HttpRequest) -> HttpResponse:
             producto = form.cleaned_data['producto']
             cantidad = form.cleaned_data['cantidad']
             costo_unitario = form.cleaned_data['costo_unitario']
-            numero_factura = form.cleaned_data.get('numero_factura', '').strip()
+            numero_factura = form.cleaned_data.get(
+                'numero_factura', '').strip()
             observaciones = form.cleaned_data.get('observaciones', '')
             subtotal = cantidad * costo_unitario
 
@@ -729,7 +856,10 @@ def crear_entrada(request: HttpRequest) -> HttpResponse:
                 costo_unitario=costo_unitario,
                 subtotal=subtotal,
             )
-        messages.success(request, f'Entrada/Compra {compra.referencia} registrada en estado borrador.')
+        messages.success(
+            request,
+            f'Entrada/Compra {compra.referencia} registrada en estado borrador.',
+        )
         return redirect('productos:entradas')
 
     return render(request, 'productos/registro_form.html', {
@@ -742,12 +872,17 @@ def crear_entrada(request: HttpRequest) -> HttpResponse:
 @require_POST
 @requiere_administrador
 def recibir_entrada(request: HttpRequest, pk: int) -> HttpResponse:
+    """Confirma la recepción de una compra y aplica el aumento de stock."""
     try:
-        compra = servicio_recibir_entrada(entrada_id=pk, responsable=request.user)
+        compra = servicio_recibir_entrada(
+            entrada_id=pk, responsable=request.user)
     except ValidationError as error:
         messages.error(request, error.messages[0])
     else:
-        messages.success(request, f'Compra {compra.referencia}: existencias acreditadas en inventario MySQL.')
+        messages.success(
+            request,
+            f'Compra {compra.referencia}: existencias acreditadas en inventario MySQL.',
+        )
     return redirect('productos:entradas')
 
 
@@ -755,7 +890,10 @@ def recibir_entrada(request: HttpRequest, pk: int) -> HttpResponse:
 
 @requiere_acceso_inventario
 def salidas(request: HttpRequest) -> HttpResponse:
-    registros = Venta.objects.select_related('id_cliente', 'id_usuario').prefetch_related('detalles__id_producto')
+    """Lista despachos y filtra los registros según el rol."""
+    registros = Venta.objects.select_related(
+        'id_cliente', 'id_usuario'
+    ).prefetch_related('detalles__id_producto')
     usuario_bd = sincronizar_usuario_bd(request.user)
     if not es_administrador(request.user) and usuario_bd:
         registros = registros.filter(id_usuario=usuario_bd)
@@ -784,11 +922,14 @@ def salidas(request: HttpRequest) -> HttpResponse:
 
 @requiere_acceso_inventario
 def crear_salida(request: HttpRequest) -> HttpResponse:
+    """Valida y registra un despacho pendiente."""
     if not Producto.objects.filter(estado='activo').exists():
-        messages.warning(request, 'Primero registra productos en el inventario.')
+        messages.warning(
+            request, 'Primero registra productos en el inventario.')
         return redirect('productos:lista')
     if not Cliente.objects.filter(estado='activo').exists():
-        messages.warning(request, 'Primero registra al menos un cliente activo.')
+        messages.warning(
+            request, 'Primero registra al menos un cliente activo.')
         return redirect('productos:cliente_nuevo')
 
     form = SalidaForm(request.POST or None)
@@ -798,7 +939,8 @@ def crear_salida(request: HttpRequest) -> HttpResponse:
             cliente = form.cleaned_data['cliente']
             producto = form.cleaned_data['producto']
             cantidad = form.cleaned_data['cantidad']
-            precio_unitario = form.cleaned_data.get('precio_unitario') or producto.precio_venta
+            precio_unitario = form.cleaned_data.get(
+                'precio_unitario') or producto.precio_venta
             observaciones = form.cleaned_data.get('observaciones', '')
             subtotal = cantidad * precio_unitario
 
@@ -817,7 +959,8 @@ def crear_salida(request: HttpRequest) -> HttpResponse:
                 precio_unitario=precio_unitario,
                 subtotal=subtotal,
             )
-        messages.success(request, f'Salida {venta.referencia} registrada y stock reservado.')
+        messages.success(
+            request, f'Salida {venta.referencia} registrada y stock reservado.')
         return redirect('productos:salidas')
 
     return render(request, 'productos/registro_form.html', {
@@ -830,6 +973,7 @@ def crear_salida(request: HttpRequest) -> HttpResponse:
 @require_POST
 @requiere_acceso_inventario
 def despachar_salida(request: HttpRequest, pk: int) -> HttpResponse:
+    """Confirma el despacho si hay existencias suficientes."""
     try:
         venta = servicio_despachar_salida(
             salida_id=pk,
@@ -839,7 +983,8 @@ def despachar_salida(request: HttpRequest, pk: int) -> HttpResponse:
     except ValidationError as error:
         messages.error(request, error.messages[0])
     else:
-        messages.success(request, f'Salida {venta.referencia} despachada y stock descontado.')
+        messages.success(
+            request, f'Salida {venta.referencia} despachada y stock descontado.')
     return redirect('productos:salidas')
 
 
@@ -847,6 +992,7 @@ def despachar_salida(request: HttpRequest, pk: int) -> HttpResponse:
 
 @requiere_administrador
 def proveedores(request: HttpRequest) -> HttpResponse:
+    """Lista proveedores con los filtros solicitados."""
     registros = Proveedor.objects.annotate(total_entradas=Count('compras'))
     q = request.GET.get('q', '').strip()
     if q:
@@ -871,10 +1017,12 @@ def proveedores(request: HttpRequest) -> HttpResponse:
 
 @requiere_administrador
 def crear_proveedor(request: HttpRequest) -> HttpResponse:
+    """Valida y registra un proveedor."""
     form = ProveedorForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         prov = form.save()
-        messages.success(request, f'Proveedor “{prov.razon_social}” guardado correctamente.')
+        messages.success(
+            request, f'Proveedor “{prov.razon_social}” guardado correctamente.')
         return redirect('productos:proveedores')
     return render(request, 'productos/registro_form.html', {
         'form': form,
@@ -887,6 +1035,7 @@ def crear_proveedor(request: HttpRequest) -> HttpResponse:
 
 @requiere_acceso_inventario
 def clientes(request: HttpRequest) -> HttpResponse:
+    """Lista clientes y aplica los filtros de consulta."""
     registros = Cliente.objects.annotate(total_salidas=Count('ventas'))
     q = request.GET.get('q', '').strip()
     if q:
@@ -913,10 +1062,12 @@ def clientes(request: HttpRequest) -> HttpResponse:
 
 @requiere_acceso_inventario
 def crear_cliente(request: HttpRequest) -> HttpResponse:
+    """Valida y registra un cliente."""
     form = ClienteForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         cli = form.save()
-        messages.success(request, f'Cliente “{cli.razon_social}” guardado correctamente.')
+        messages.success(
+            request, f'Cliente “{cli.razon_social}” guardado correctamente.')
         return redirect('productos:clientes')
     return render(request, 'productos/registro_form.html', {
         'form': form,
@@ -929,7 +1080,9 @@ def crear_cliente(request: HttpRequest) -> HttpResponse:
 
 @requiere_acceso_inventario
 def servicios(request: HttpRequest) -> HttpResponse:
-    registros = Servicio.objects.select_related('id_cliente', 'id_tipo_servicio', 'id_usuario')
+    """Lista servicios SG-SST y sus estados."""
+    registros = Servicio.objects.select_related(
+        'id_cliente', 'id_tipo_servicio', 'id_usuario')
     q = request.GET.get('q', '').strip()
     if q:
         registros = registros.filter(
@@ -940,7 +1093,8 @@ def servicios(request: HttpRequest) -> HttpResponse:
     if request.GET.get('estado'):
         registros = registros.filter(estado=request.GET['estado'])
 
-    valor_total = registros.aggregate(total=Sum('valor'))['total'] or Decimal('0.00')
+    valor_total = registros.aggregate(total=Sum('valor'))[
+        'total'] or Decimal('0.00')
 
     return render(request, 'productos/modulo_lista.html', {
         'seccion': 'servicios',
@@ -960,8 +1114,10 @@ def servicios(request: HttpRequest) -> HttpResponse:
 
 @requiere_acceso_inventario
 def crear_servicio(request: HttpRequest) -> HttpResponse:
+    """Valida y registra un servicio asociado a un cliente."""
     if not Cliente.objects.filter(estado='activo').exists():
-        messages.warning(request, 'Primero registra al menos un cliente activo.')
+        messages.warning(
+            request, 'Primero registra al menos un cliente activo.')
         return redirect('productos:cliente_nuevo')
 
     form = ServicioForm(request.POST or None)
@@ -969,7 +1125,8 @@ def crear_servicio(request: HttpRequest) -> HttpResponse:
         servicio = form.save(commit=False)
         servicio.id_usuario = sincronizar_usuario_bd(request.user)
         servicio.save()
-        messages.success(request, f'Servicio {servicio.referencia} creado exitosamente.')
+        messages.success(
+            request, f'Servicio {servicio.referencia} creado exitosamente.')
         return redirect('productos:servicios')
 
     return render(request, 'productos/registro_form.html', {
@@ -982,6 +1139,7 @@ def crear_servicio(request: HttpRequest) -> HttpResponse:
 # ---------------------------- Reportes & Configuración ----------------------------
 
 def _respuesta_reporte_pdf(datos):
+    """Genera el reporte de inventario en formato PDF."""
     from io import BytesIO
     from xml.sax.saxutils import escape
 
@@ -1022,15 +1180,18 @@ def _respuesta_reporte_pdf(datos):
     ))
 
     def tabla(encabezados, filas, anchos=None):
+        """Crea una tabla PDF con estilos y anchos de columna."""
         contenido = [[
             Paragraph(escape(str(valor)), estilos["EncabezadoReporte"])
             for valor in encabezados
         ]]
         contenido.extend([
-            [Paragraph(escape(str(valor)), estilos["CeldaReporte"]) for valor in fila]
+            [Paragraph(escape(str(valor)), estilos["CeldaReporte"])
+             for valor in fila]
             for fila in filas
         ])
-        tabla_pdf = Table(contenido, colWidths=anchos, repeatRows=1, hAlign="LEFT")
+        tabla_pdf = Table(contenido, colWidths=anchos,
+                          repeatRows=1, hAlign="LEFT")
         estilos_tabla = [
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#243B64")),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
@@ -1042,23 +1203,31 @@ def _respuesta_reporte_pdf(datos):
             ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
         ]
         if filas:
-            estilos_tabla.append(("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F2F5F9")]))
+            estilos_tabla.append((
+                "ROWBACKGROUNDS", (0, 1), (-1, -1),
+                [colors.white, colors.HexColor("#F2F5F9")],
+            ))
         tabla_pdf.setStyle(TableStyle(estilos_tabla))
         return tabla_pdf
 
     historia = [
         Paragraph("Reporte de inventario", estilos["Title"]),
-        Paragraph(f"Magnus SIG · Generado: {escape(datos['generado'])}", estilos["BodyText"]),
+        Paragraph(
+            f"Magnus SIG · Generado: {escape(datos['generado'])}", estilos["BodyText"]),
         Spacer(1, 7 * mm),
         Paragraph("Resumen general", estilos["Heading2"]),
         tabla(["Indicador", "Valor"], datos["indicadores"], [100 * mm, 150 * mm]),
         Spacer(1, 6 * mm),
         Paragraph("Valor estimado por categoría (COP)", estilos["Heading2"]),
-        tabla(["Categoría", "Unidades", "Valor estimado (COP)"], datos["categorias"], [125 * mm, 45 * mm, 80 * mm]),
+        tabla(
+            ["Categoría", "Unidades", "Valor estimado (COP)"],
+            datos["categorias"], [125 * mm, 45 * mm, 80 * mm],
+        ),
         Spacer(1, 6 * mm),
         Paragraph("Movimientos recientes (últimos 10)", estilos["Heading2"]),
         tabla(
-            ["Fecha", "Código", "Producto", "Tipo", "Cantidad", "Responsable", "Referencia"],
+            ["Fecha", "Código", "Producto", "Tipo",
+                "Cantidad", "Responsable", "Referencia"],
             datos["movimientos"],
             [44 * mm, 28 * mm, 58 * mm, 32 * mm, 24 * mm, 40 * mm, 30 * mm],
         ),
@@ -1071,6 +1240,7 @@ def _respuesta_reporte_pdf(datos):
 
 
 def _respuesta_reporte_excel(datos):
+    """Genera el reporte de inventario en formato Excel."""
     from io import BytesIO
 
     from openpyxl import Workbook
@@ -1093,7 +1263,10 @@ def _respuesta_reporte_excel(datos):
         categorias.append(fila)
 
     movimientos = libro.create_sheet("Movimientos recientes")
-    movimientos.append(["Fecha", "Código", "Producto", "Tipo", "Cantidad", "Responsable", "Referencia"])
+    movimientos.append([
+        "Fecha", "Código", "Producto", "Tipo", "Cantidad",
+        "Responsable", "Referencia",
+    ])
     for fila in datos["movimientos_excel"]:
         movimientos.append(fila)
 
@@ -1114,7 +1287,8 @@ def _respuesta_reporte_excel(datos):
                 max(len(str(celda.value or "")) for celda in columna) + 2,
                 42,
             )
-            hoja.column_dimensions[get_column_letter(columna[0].column)].width = max(ancho, 12)
+            hoja.column_dimensions[get_column_letter(
+                columna[0].column)].width = max(ancho, 12)
 
     resumen["B7"].number_format = '"$"#,##0.00'
     for fila in categorias.iter_rows(min_row=2, min_col=3, max_col=3):
@@ -1130,6 +1304,7 @@ def _respuesta_reporte_excel(datos):
 
 
 def _respuesta_reporte_word(datos):
+    """Genera el reporte de inventario en formato Word."""
     from io import BytesIO
 
     from docx import Document
@@ -1146,10 +1321,12 @@ def _respuesta_reporte_word(datos):
 
     titulo = documento.add_heading("Reporte de inventario", level=0)
     titulo.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    subtitulo = documento.add_paragraph(f"Magnus SIG · Generado: {datos['generado']}")
+    subtitulo = documento.add_paragraph(
+        f"Magnus SIG · Generado: {datos['generado']}")
     subtitulo.style = "Subtitle"
 
     def tabla(titulos, filas):
+        """Agrega una tabla con encabezado y filas al documento Word."""
         tabla_doc = documento.add_table(rows=1, cols=len(titulos))
         tabla_doc.style = "Table Grid"
         tabla_doc.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -1179,7 +1356,8 @@ def _respuesta_reporte_word(datos):
     tabla(["Categoría", "Unidades", "Valor estimado (COP)"], datos["categorias"])
     documento.add_heading("Movimientos recientes (últimos 10)", level=1)
     tabla(
-        ["Fecha", "Código", "Producto", "Tipo", "Cantidad", "Responsable", "Referencia"],
+        ["Fecha", "Código", "Producto", "Tipo",
+            "Cantidad", "Responsable", "Referencia"],
         datos["movimientos"],
     )
 
@@ -1194,6 +1372,7 @@ def _respuesta_reporte_word(datos):
 
 
 def _exportar_reporte(request, contexto, formato):
+    """Selecciona y devuelve el formato solicitado para exportación."""
     categorias = list(contexto["categorias"])
     movimientos = list(contexto["movimientos_recientes"])
     generado = timezone.localtime().strftime("%d/%m/%Y %H:%M")
@@ -1208,7 +1387,8 @@ def _exportar_reporte(request, contexto, formato):
         ["Agotados", contexto["total_agotados"]],
     ]
     filas_categorias = [
-        [categoria.nombre, int(categoria.unidades or 0), float(categoria.valor or 0)]
+        [categoria.nombre, int(categoria.unidades or 0),
+         float(categoria.valor or 0)]
         for categoria in categorias
     ]
     filas_movimientos = []
@@ -1255,6 +1435,7 @@ def _exportar_reporte(request, contexto, formato):
 
 @requiere_administrador
 def reportes(request: HttpRequest) -> HttpResponse:
+    """Prepara las métricas y datos disponibles para reportes."""
     stock_minimo = obtener_stock_minimo()
     total_productos = Producto.objects.count()
     resumen = Inventario.objects.aggregate(
@@ -1273,7 +1454,8 @@ def reportes(request: HttpRequest) -> HttpResponse:
         unidades=Sum("productos__inventario_rel__cantidad_actual"),
         valor=Sum(
             ExpressionWrapper(
-                F("productos__inventario_rel__cantidad_actual") * F("productos__precio_venta"),
+                F("productos__inventario_rel__cantidad_actual") *
+                F("productos__precio_venta"),
                 output_field=DecimalField(max_digits=16, decimal_places=2),
             )
         ),
@@ -1282,8 +1464,10 @@ def reportes(request: HttpRequest) -> HttpResponse:
     exportaciones_csv = {
         "productos": (
             "inventario-productos.csv",
-            ["Código", "Producto", "Categoría", "Precio Venta COP", "Existencias", "Estado"],
-            Producto.objects.select_related("id_categoria", "inventario_rel").order_by("nombre"),
+            ["Código", "Producto", "Categoría",
+                "Precio Venta COP", "Existencias", "Estado"],
+            Producto.objects.select_related(
+                "id_categoria", "inventario_rel").order_by("nombre"),
             lambda p: [
                 p.codigo,
                 p.nombre,
@@ -1295,7 +1479,8 @@ def reportes(request: HttpRequest) -> HttpResponse:
         ),
         "movimientos": (
             "historial-movimientos.csv",
-            ["Fecha", "Código", "Producto", "Tipo", "Cantidad", "Responsable", "Motivo"],
+            ["Fecha", "Código", "Producto", "Tipo",
+                "Cantidad", "Responsable", "Motivo"],
             MovimientoInventario.objects.select_related(
                 "id_producto", "id_usuario"
             ).order_by("-fecha_movimiento"),
@@ -1347,15 +1532,18 @@ def reportes(request: HttpRequest) -> HttpResponse:
 
 @requiere_administrador
 def configuracion(request: HttpRequest) -> HttpResponse:
+    """Actualiza la configuración general del inventario."""
     config, _ = ConfiguracionInventario.objects.get_or_create(pk=1)
     form = ConfiguracionForm(request.POST or None, instance=config)
     if request.method == 'POST' and form.is_valid():
         form.save()
-        messages.success(request, 'La configuración se guardó correctamente en MySQL.')
+        messages.success(
+            request, 'La configuración se guardó correctamente en MySQL.')
         return redirect('productos:configuracion')
     return render(request, 'productos/configuracion.html', {'form': form})
 
 
 @requiere_acceso_inventario
 def buscar_producto(request: HttpRequest) -> HttpResponse:
+    """Procesa la búsqueda de productos y devuelve resultados parciales."""
     return lista_productos(request)

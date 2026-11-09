@@ -18,6 +18,7 @@ def validar_nit(valor):
 
 
 def validar_documento_cliente(tipo, valor):
+    """Valida el documento de identidad según el tipo seleccionado."""
     documento = (valor or "").strip().upper()
     if tipo == "CC":
         if not re.fullmatch(r"\d{1,10}", documento) or int(documento) == 0:
@@ -27,12 +28,16 @@ def validar_documento_cliente(tipo, valor):
             )
     elif tipo == "CE":
         if not re.fullmatch(r"\d{1,12}", documento):
-            raise ValidationError("La cédula de extranjería debe contener solo números y máximo 12 dígitos.")
+            raise ValidationError(
+                "La cédula de extranjería debe contener solo números "
+                "y máximo 12 dígitos."
+            )
     elif tipo == "NIT":
         return validar_nit(documento)
     elif tipo == "PASAPORTE":
         if not re.fullmatch(r"[A-Z0-9-]{5,20}", documento):
-            raise ValidationError("El pasaporte debe tener entre 5 y 20 caracteres alfanuméricos.")
+            raise ValidationError(
+                "El pasaporte debe tener entre 5 y 20 caracteres alfanuméricos.")
     else:
         raise ValidationError("Selecciona un tipo de documento válido.")
     return documento
@@ -45,10 +50,12 @@ def validar_telefono_colombiano(valor):
         return telefono
 
     if not re.fullmatch(r"[0-9+().\-\s]+", telefono):
-        raise ValidationError("Usa solo números, espacios y los signos + ( ) . -.")
+        raise ValidationError(
+            "Usa solo números, espacios y los signos + ( ) . -.")
 
     if telefono.count("+") > 1 or ("+" in telefono and not telefono.lstrip().startswith("+")):
-        raise ValidationError("El signo + solo puede aparecer una vez y al inicio del teléfono.")
+        raise ValidationError(
+            "El signo + solo puede aparecer una vez y al inicio del teléfono.")
 
     digitos = re.sub(r"\D", "", telefono)
     if len(digitos) == 10:
@@ -65,28 +72,38 @@ def validar_telefono_colombiano(valor):
 
 
 def validar_direccion(valor):
+    """Rechaza direcciones vacías o con caracteres no permitidos."""
     direccion = " ".join((valor or "").split())
     if not direccion:
         return direccion
     if len(direccion) < 5:
         raise ValidationError("La dirección debe tener al menos 5 caracteres.")
     if any(unicodedata.category(caracter).startswith("C") for caracter in direccion):
-        raise ValidationError("La dirección contiene caracteres no permitidos.")
+        raise ValidationError(
+            "La dirección contiene caracteres no permitidos.")
     if not re.fullmatch(r"[\w\s#.,'’()/\-º°:&+]+", direccion, flags=re.UNICODE):
-        raise ValidationError("Revisa la dirección; usa letras, números y signos habituales (#, -, /, .).")
+        raise ValidationError(
+            "Revisa la dirección; usa letras, números y signos "
+            "habituales (#, -, /, .)."
+        )
     if not any(caracter.isalpha() for caracter in direccion):
-        raise ValidationError("La dirección debe incluir una vía o referencia con letras.")
+        raise ValidationError(
+            "La dirección debe incluir una vía o referencia con letras.")
     return direccion
 
 
 def validar_ciudad(valor):
+    """Valida los caracteres admitidos en el campo de ciudad."""
     ciudad = " ".join((valor or "").split())
     if not ciudad:
         return ciudad
     if any(unicodedata.category(caracter).startswith("C") for caracter in ciudad):
         raise ValidationError("La ciudad contiene caracteres no permitidos.")
     if not re.fullmatch(r"[\w\s.'’\-]+", ciudad, flags=re.UNICODE):
-        raise ValidationError("La ciudad solo puede contener letras, números, espacios, puntos o guiones.")
+        raise ValidationError(
+            "La ciudad solo puede contener letras, números, espacios, "
+            "puntos o guiones."
+        )
     if not any(caracter.isalpha() for caracter in ciudad):
         raise ValidationError("Ingresa el nombre de una ciudad.")
     return ciudad

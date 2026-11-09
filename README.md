@@ -21,8 +21,8 @@ El dashboard, las alertas de stock bajo y el gráfico de tendencia se calculan e
 | **Categorías** | `/categorias/` | Clasificación de productos (Camillas, Botiquines, Extintores, EPP, Dotaciones, Señalización, Emergencias). |
 | **Servicios SG-SST** | `/servicios/` | Gestión de servicios de consultoría, capacitación, inspecciones y medicina ocupacional para clientes. |
 | **Movimientos** | `/movimientos/` | Registro cronológico inmutable de entradas, salidas y ajustes con responsable y documento soporte. |
-| **Entradas (Compras)** | `/movimientos/entrada/` | Recepción de mercancía de proveedores: incrementa automáticamente el inventario y genera trazabilidad. |
-| **Salidas (Despachos)** | `/movimientos/salida/` | Despacho a clientes o áreas internas: valida existencias disponibles y descuenta inventario. |
+| **Entradas (Compras)** | `/entradas/` | Recepción de mercancía de proveedores: incrementa automáticamente el inventario y genera trazabilidad. |
+| **Salidas (Despachos)** | `/salidas/` | Despacho a clientes o áreas internas: valida existencias disponibles y descuenta inventario. |
 | **Proveedores** | `/proveedores/` | Directorio de proveedores con documento (NIT/CC), contacto comercial, dirección y teléfono. |
 | **Clientes** | `/clientes/` | Directorio de empresas y clientes vinculados con despachos y contratos de servicios. |
 | **Reportes** | `/reportes/` | Métricas de rendimiento, desglose de inventario y exportación de datos en formato CSV. |
@@ -106,8 +106,8 @@ CRUD_MagnusSIG/
 Ejecuta todos los comandos desde la **raíz del repositorio** (`CRUD_MagnusSIG`), en una terminal de **PowerShell**.
 
 ### 1. Requisitos previos
-* **Python 3.12+** instalado.
-* **Node.js 18+ (LTS)** y **npm** instalados.
+* **Python 3.12 o superior** instalado.
+* **Node.js 18 o superior (LTS)** y **npm** instalados.
 * **MySQL Server 8.0+** instalado y en ejecución (o XAMPP/WAMP con MySQL).
 
 ---

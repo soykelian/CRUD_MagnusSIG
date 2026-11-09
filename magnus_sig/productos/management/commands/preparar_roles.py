@@ -9,11 +9,15 @@ class Command(BaseCommand):
     help = 'Crea los grupos Administrador y Vendedor para el prototipo web.'
 
     def handle(self, *args, **options):
-        administrador, creado = Group.objects.get_or_create(name=GRUPO_ADMINISTRADOR)
+        """Crea o actualiza los grupos operativos del inventario."""
+        administrador, creado = Group.objects.get_or_create(
+            name=GRUPO_ADMINISTRADOR)
         administrador.permissions.set(Permission.objects.all())
         estado = 'creado' if creado else 'ya existía'
-        self.stdout.write(f'Grupo {GRUPO_ADMINISTRADOR}: {estado}, con permisos completos.')
+        self.stdout.write(
+            f'Grupo {GRUPO_ADMINISTRADOR}: {estado}, con permisos completos.')
 
         _, creado = Group.objects.get_or_create(name=GRUPO_VENDEDOR)
         estado = 'creado' if creado else 'ya existía'
-        self.stdout.write(f'Grupo {GRUPO_VENDEDOR}: {estado}, acceso de consulta.')
+        self.stdout.write(
+            f'Grupo {GRUPO_VENDEDOR}: {estado}, acceso de consulta.')

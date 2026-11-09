@@ -38,7 +38,8 @@ def validar_stock_reservado(producto, cantidad, salida_pk=None):
     )
     if salida_pk:
         reservas = reservas.exclude(pk=salida_pk)
-    reservado = reservas.aggregate(total=Sum('detalles__cantidad'))['total'] or Decimal('0.000')
+    reservado = reservas.aggregate(total=Sum('detalles__cantidad'))[
+        'total'] or Decimal('0.000')
     disponible = Decimal(str(producto.cantidad))
     requerido = Decimal(str(cantidad))
     if requerido + reservado > disponible:
@@ -48,6 +49,7 @@ def validar_stock_reservado(producto, cantidad, salida_pk=None):
 
 
 class ProductoForm(forms.ModelForm):
+    """Formulario de creación y edición de productos."""
     estado = forms.ChoiceField(
         choices=[('activo', 'Activo'), ('inactivo', 'Inactivo')],
         initial='activo',
@@ -99,14 +101,20 @@ class ProductoForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """Configura el formulario con opciones acordes al registro."""
         super().__init__(*args, **kwargs)
-        self.fields['id_categoria'].queryset = Categoria.objects.filter(estado='activo').order_by('nombre')
-        self.fields['id_proveedor'].queryset = Proveedor.objects.filter(estado='activo').order_by('razon_social')
+        self.fields['id_categoria'].queryset = Categoria.objects.filter(
+            estado='activo'
+        ).order_by('nombre')
+        self.fields['id_proveedor'].queryset = Proveedor.objects.filter(
+            estado='activo'
+        ).order_by('razon_social')
         if self.instance and self.instance.pk:
             self.fields['cantidad'].initial = self.instance.cantidad
             self.fields['ubicacion'].initial = self.instance.ubicacion
 
     def clean_codigo(self) -> str:
+        """Valida que el código del producto sea único."""
         codigo = self.cleaned_data['codigo'].strip().upper()
         if not codigo:
             raise forms.ValidationError('El código o SKU es obligatorio.')
@@ -114,36 +122,46 @@ class ProductoForm(forms.ModelForm):
         if self.instance.pk:
             repetido = repetido.exclude(pk=self.instance.pk)
         if repetido.exists():
-            raise forms.ValidationError('Ya existe un producto con este código.')
+            raise forms.ValidationError(
+                'Ya existe un producto con este código.')
         return codigo
 
     def clean_nombre(self) -> str:
+        """Normaliza y valida el nombre ingresado."""
         nombre = self.cleaned_data['nombre'].strip()
         if not nombre:
-            raise forms.ValidationError('El nombre del producto es obligatorio.')
+            raise forms.ValidationError(
+                'El nombre del producto es obligatorio.')
         return nombre
 
     def clean_estado(self) -> str:
+        """Valida el estado seleccionado."""
         return self.cleaned_data.get('estado') or 'activo'
 
     def clean_precio_venta(self):
+        """Comprueba que el precio de venta sea válido."""
         precio = self.cleaned_data['precio_venta']
         if precio is None or precio < 0:
-            raise forms.ValidationError('El precio de venta no puede ser negativo.')
+            raise forms.ValidationError(
+                'El precio de venta no puede ser negativo.')
         return precio
 
     def clean_precio_compra(self):
+        """Comprueba que el costo de compra sea válido."""
         precio = self.cleaned_data['precio_compra']
         if precio is None or precio < 0:
-            raise forms.ValidationError('El precio de compra no puede ser negativo.')
+            raise forms.ValidationError(
+                'El precio de compra no puede ser negativo.')
         return precio
 
     @transaction.atomic
     def save(self, commit=True):
+        """Guarda el modelo con los valores validados."""
         producto = super().save(commit=commit)
         if commit:
             cantidad_val = self.cleaned_data.get('cantidad', 0)
-            ubicacion_val = self.cleaned_data.get('ubicacion', 'Bodega Principal')
+            ubicacion_val = self.cleaned_data.get(
+                'ubicacion', 'Bodega Principal')
             inv, _ = Inventario.objects.get_or_create(id_producto=producto)
             inv.cantidad_actual = Decimal(str(cantidad_val))
             inv.ubicacion = ubicacion_val
@@ -152,6 +170,7 @@ class ProductoForm(forms.ModelForm):
 
 
 class CategoriaForm(forms.ModelForm):
+    """Formulario para validar y guardar categorías."""
     estado = forms.ChoiceField(
         choices=[('activo', 'Activo'), ('inactivo', 'Inactivo')],
         initial='activo',
@@ -172,34 +191,44 @@ class CategoriaForm(forms.ModelForm):
         }
 
     def clean_estado(self) -> str:
+        """Valida el estado seleccionado."""
         return self.cleaned_data.get('estado') or 'activo'
 
     def clean_nombre(self) -> str:
+        """Normaliza y valida el nombre ingresado."""
         nombre = self.cleaned_data['nombre'].strip()
         if not nombre:
-            raise forms.ValidationError('El nombre de la categoría es obligatorio.')
+            raise forms.ValidationError(
+                'El nombre de la categoría es obligatorio.')
         repetida = Categoria.objects.filter(nombre__iexact=nombre)
         if self.instance.pk:
             repetida = repetida.exclude(pk=self.instance.pk)
         if repetida.exists():
-            raise forms.ValidationError('Ya existe una categoría con ese nombre.')
+            raise forms.ValidationError(
+                'Ya existe una categoría con ese nombre.')
         return nombre
 
 
 class ContactoValidationMixin:
+    """Comparte la validación de datos de contacto."""
+
     def clean_telefono(self):
+        """Valida el formato del teléfono de contacto."""
         telefono = (self.cleaned_data.get("telefono") or "").strip()
         validar_telefono_colombiano(telefono)
         return telefono or None
 
     def clean_direccion(self):
+        """Valida y normaliza la dirección de contacto."""
         return validar_direccion(self.cleaned_data.get("direccion") or "")
 
     def clean_ciudad(self):
+        """Valida y normaliza la ciudad."""
         return validar_ciudad(self.cleaned_data.get("ciudad") or "")
 
 
 class ProveedorForm(ContactoValidationMixin, forms.ModelForm):
+    """Formulario de registro y validación de proveedores."""
     telefono = forms.CharField(
         label="Teléfono de contacto",
         required=True,
@@ -226,6 +255,7 @@ class ProveedorForm(ContactoValidationMixin, forms.ModelForm):
         max_length=100,
         widget=forms.TextInput(attrs={"autocomplete": "address-level2"}),
     )
+
     class Meta:
         model = Proveedor
         fields = [
@@ -250,6 +280,7 @@ class ProveedorForm(ContactoValidationMixin, forms.ModelForm):
         }
 
     def clean_nit(self):
+        """Valida el NIT del proveedor."""
         nit = validar_nit(self.cleaned_data["nit"])
         existentes = Proveedor.objects.filter(nit__iexact=nit)
         if self.instance.pk:
@@ -259,6 +290,7 @@ class ProveedorForm(ContactoValidationMixin, forms.ModelForm):
         return nit
 
     def clean_razon_social(self):
+        """Valida y normaliza la razón social."""
         razon = self.cleaned_data['razon_social'].strip()
         if not razon:
             raise forms.ValidationError('La razón social es obligatoria.')
@@ -266,6 +298,7 @@ class ProveedorForm(ContactoValidationMixin, forms.ModelForm):
 
 
 class ClienteForm(ContactoValidationMixin, forms.ModelForm):
+    """Formulario de registro y validación de clientes."""
     telefono = forms.CharField(
         label="Teléfono",
         required=True,
@@ -292,6 +325,7 @@ class ClienteForm(ContactoValidationMixin, forms.ModelForm):
         max_length=100,
         widget=forms.TextInput(attrs={"autocomplete": "address-level2"}),
     )
+
     class Meta:
         model = Cliente
         fields = [
@@ -318,6 +352,7 @@ class ClienteForm(ContactoValidationMixin, forms.ModelForm):
         }
 
     def clean_numero_documento(self):
+        """Valida el documento de identificación del cliente."""
         tipo = self.cleaned_data.get("tipo_documento")
         doc = validar_documento_cliente(
             tipo,
@@ -327,19 +362,24 @@ class ClienteForm(ContactoValidationMixin, forms.ModelForm):
         if self.instance.pk:
             existentes = existentes.exclude(pk=self.instance.pk)
         if existentes.exists():
-            raise forms.ValidationError('Ya existe un cliente con ese número de documento.')
+            raise forms.ValidationError(
+                'Ya existe un cliente con ese número de documento.')
         return doc
 
     def clean_razon_social(self):
+        """Valida y normaliza la razón social."""
         razon = self.cleaned_data['razon_social'].strip()
         if not razon:
-            raise forms.ValidationError('La razón social o nombre del cliente es obligatorio.')
+            raise forms.ValidationError(
+                'La razón social o nombre del cliente es obligatorio.')
         return razon
 
 
 class EntradaForm(forms.Form):
+    """Valida los datos de una compra o entrada de mercancía."""
     proveedor = forms.ModelChoiceField(
-        queryset=Proveedor.objects.filter(estado='activo').order_by('razon_social'),
+        queryset=Proveedor.objects.filter(
+            estado='activo').order_by('razon_social'),
         label='Proveedor',
     )
     producto = forms.ModelChoiceField(
@@ -371,21 +411,26 @@ class EntradaForm(forms.Form):
     )
 
     def clean_cantidad(self):
+        """Comprueba que la cantidad ingresada sea positiva."""
         cant = self.cleaned_data['cantidad']
         if cant <= 0:
             raise forms.ValidationError('La cantidad debe ser mayor que cero.')
         return cant
 
     def clean_costo_unitario(self):
+        """Comprueba que el costo unitario sea positivo."""
         costo = self.cleaned_data['costo_unitario']
         if costo <= 0:
-            raise forms.ValidationError('El costo unitario debe ser mayor que cero.')
+            raise forms.ValidationError(
+                'El costo unitario debe ser mayor que cero.')
         return costo
 
 
 class SalidaForm(forms.Form):
+    """Valida un despacho y comprueba las existencias reservadas."""
     cliente = forms.ModelChoiceField(
-        queryset=Cliente.objects.filter(estado='activo').order_by('razon_social'),
+        queryset=Cliente.objects.filter(
+            estado='activo').order_by('razon_social'),
         label='Cliente destinatario',
     )
     producto = forms.ModelChoiceField(
@@ -413,6 +458,7 @@ class SalidaForm(forms.Form):
     )
 
     def clean(self):
+        """Valida los campos relacionados y devuelve los datos limpios."""
         datos = super().clean()
         producto = datos.get('producto')
         cantidad = datos.get('cantidad')
@@ -422,6 +468,7 @@ class SalidaForm(forms.Form):
 
 
 class MovimientoForm(forms.Form):
+    """Valida los movimientos manuales de existencias."""
     producto = forms.ModelChoiceField(
         queryset=Producto.objects.filter(estado='activo').order_by('nombre'),
         label='Producto',
@@ -450,19 +497,23 @@ class MovimientoForm(forms.Form):
     )
 
     def clean_cantidad(self):
+        """Comprueba que la cantidad ingresada sea positiva."""
         cant = self.cleaned_data['cantidad']
         if cant == 0:
-            raise forms.ValidationError('La cantidad debe ser diferente de cero.')
+            raise forms.ValidationError(
+                'La cantidad debe ser diferente de cero.')
         return cant
 
 
 class ServicioForm(forms.ModelForm):
+    """Valida los servicios asociados a clientes."""
     valor = forms.DecimalField(
         label="Valor del servicio (COP)",
         max_digits=14,
         decimal_places=2,
         min_value=Decimal("0.00"),
     )
+
     class Meta:
         model = Servicio
         fields = [
@@ -490,11 +541,17 @@ class ServicioForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """Configura el formulario con opciones acordes al registro."""
         super().__init__(*args, **kwargs)
-        self.fields['id_cliente'].queryset = Cliente.objects.filter(estado='activo').order_by('razon_social')
-        self.fields['id_tipo_servicio'].queryset = TipoServicio.objects.filter(estado='activo').order_by('nombre')
+        self.fields['id_cliente'].queryset = Cliente.objects.filter(
+            estado='activo'
+        ).order_by('razon_social')
+        self.fields['id_tipo_servicio'].queryset = TipoServicio.objects.filter(
+            estado='activo'
+        ).order_by('nombre')
 
     def clean(self):
+        """Valida los campos relacionados y devuelve los datos limpios."""
         datos = super().clean()
         inicio = datos.get("fecha_inicio")
         finalizacion = datos.get("fecha_finalizacion")
@@ -507,6 +564,7 @@ class ServicioForm(forms.ModelForm):
 
 
 class ConfiguracionForm(forms.ModelForm):
+    """Formulario de parámetros generales del inventario."""
     class Meta:
         model = ConfiguracionInventario
         fields = ['nombre_organizacion', 'stock_minimo', 'alertas_stock_bajo']
@@ -518,6 +576,7 @@ class ConfiguracionForm(forms.ModelForm):
 
 
 class UsuarioForm(ContactoValidationMixin, forms.ModelForm):
+    """Formulario para datos de usuario y contacto."""
     correo = forms.EmailField(
         label="Correo electrónico",
         required=True,

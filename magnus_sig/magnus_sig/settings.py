@@ -26,7 +26,8 @@ for _env_candidate in [BASE_DIR / '.env', BASE_DIR.parent / '.env']:
                 _line = _line.strip()
                 if _line and not _line.startswith('#') and '=' in _line:
                     _k, _, _v = _line.partition('=')
-                    os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
+                    os.environ.setdefault(
+                        _k.strip(), _v.strip().strip('"').strip("'"))
         break
 
 
@@ -34,7 +35,8 @@ for _env_candidate in [BASE_DIR / '.env', BASE_DIR.parent / '.env']:
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'true').strip().lower() in {'1', 'true', 'yes'}
+DEBUG = os.environ.get('DJANGO_DEBUG', 'true').strip().lower() in {
+    '1', 'true', 'yes'}
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '').strip()
 if not SECRET_KEY:
@@ -98,7 +100,8 @@ WSGI_APPLICATION = 'magnus_sig.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-USE_SQLITE = os.environ.get('DJANGO_USE_SQLITE', 'false').strip().lower() in {'1', 'true', 'yes'}
+USE_SQLITE = os.environ.get('DJANGO_USE_SQLITE', 'false').strip().lower() in {
+    '1', 'true', 'yes'}
 
 if USE_SQLITE:
     DATABASES = {

@@ -5,11 +5,17 @@ from .roles import es_administrador, es_vendedor
 
 
 def roles_inventario(request):
+    """Expone el rol y la organización activa a las plantillas."""
     user = request.user
     administrador = es_administrador(user)
     vendedor = es_vendedor(user)
     try:
-        organizacion = ConfiguracionInventario.objects.filter(pk=1).values_list('nombre_organizacion', flat=True).first() or 'Magnus SIG'
+        organizacion = (
+            ConfiguracionInventario.objects.filter(pk=1)
+            .values_list('nombre_organizacion', flat=True)
+            .first()
+            or 'Magnus SIG'
+        )
     except (OperationalError, ProgrammingError):
         organizacion = 'Magnus SIG'
     return {

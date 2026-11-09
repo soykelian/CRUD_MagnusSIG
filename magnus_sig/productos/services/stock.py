@@ -19,10 +19,11 @@ from ..models import (
 
 
 def obtener_inventario_producto(producto_id: int) -> Inventario:
-    """Retorna o crea el registro de inventario con bloqueo transaccional."""
+    """Obtiene o crea el inventario del producto bajo bloqueo de fila."""
     inv, _ = Inventario.objects.select_for_update().get_or_create(
         id_producto_id=producto_id,
-        defaults={'cantidad_actual': Decimal('0.000'), 'ubicacion': 'Bodega Principal'}
+        defaults={'cantidad_actual': Decimal(
+            '0.000'), 'ubicacion': 'Bodega Principal'}
     )
     return inv
 
@@ -34,20 +35,23 @@ bloquear_producto = obtener_inventario_producto
 def registrar_movimiento(
     *, producto_id: int, tipo: str, cantidad: int | float | Decimal, motivo: str, responsable
 ) -> MovimientoInventario:
-    """Aplica una entrada, salida o ajuste y deja su trazabilidad."""
-    producto = get_object_or_404(Producto.objects.select_for_update(), pk=producto_id)
+    """Valida, aplica y registra un movimiento dentro de una transacción."""
+    producto = get_object_or_404(
+        Producto.objects.select_for_update(), pk=producto_id)
     inv = obtener_inventario_producto(producto_id)
     usuario_bd = sincronizar_usuario_bd(responsable)
 
     cant_dec = Decimal(str(abs(cantidad)))
     if cant_dec <= 0:
-        raise ValidationError('La cantidad del movimiento debe ser mayor a cero.')
+        raise ValidationError(
+            'La cantidad del movimiento debe ser mayor a cero.')
 
     if tipo == 'ajuste':
         # El ajuste manual puede ser positivo o negativo
         if cantidad < 0:
             if inv.cantidad_actual - cant_dec < 0:
-                raise ValidationError('No hay existencias suficientes para este ajuste negativo.')
+                raise ValidationError(
+                    'No hay existencias suficientes para este ajuste negativo.')
             inv.cantidad_actual -= cant_dec
             tipo_mov = 'salida'
         else:
@@ -56,7 +60,8 @@ def registrar_movimiento(
     elif tipo in ('salida', 'devolucion_salida'):
         if inv.cantidad_actual < cant_dec:
             raise ValidationError(
-                f'Existencias insuficientes para este movimiento. Disponibles: {inv.cantidad_actual}.'
+                'Existencias insuficientes para este movimiento. '
+                f'Disponibles: {inv.cantidad_actual}.'
             )
         inv.cantidad_actual -= cant_dec
         tipo_mov = 'salida'
@@ -80,7 +85,7 @@ def registrar_movimiento(
 
 @transaction.atomic
 def recibir_entrada(*, entrada_id: int, responsable) -> Compra:
-    """Cambia una compra a recibida y acredita el inventario en MySQL."""
+    """Cambia una compra a recibida y acredita el inventario de forma atómica."""
     compra = get_object_or_404(
         Compra.objects.select_for_update().prefetch_related('detalles__id_producto'),
         pk=entrada_id,
@@ -115,7 +120,8 @@ def recibir_entrada(*, entrada_id: int, responsable) -> Compra:
 @transaction.atomic
 def despachar_salida(*, salida_id: int, responsable, administrador: bool) -> Venta:
     """Despacha una venta y descuenta el stock dentro de una transacción atómica."""
-    ventas_q = Venta.objects.select_for_update().prefetch_related('detalles__id_producto')
+    ventas_q = Venta.objects.select_for_update(
+    ).prefetch_related('detalles__id_producto')
     if not administrador:
         usuario_bd = sincronizar_usuario_bd(responsable)
         ventas_q = ventas_q.filter(id_usuario=usuario_bd)
